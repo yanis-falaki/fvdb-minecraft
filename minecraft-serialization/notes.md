@@ -1,0 +1,1 @@
+This folder is used to experiment with serialization of minecraft worlds/schemas etc, into python objects.

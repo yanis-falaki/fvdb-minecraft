@@ -2,12 +2,19 @@
 #include <fstream>
 #include <sstream>
 #include <cstdint>
+#include <bitset>
+#include <zlib.h>
+#include <vector>
+#include <helpers.h>
+#include <constants.h>
+
+using namespace constants;
 
 int main()
-{   
-    int8_t x = 5;
-    int8_t y = 122;
-    int8_t z = -8;
+{
+    int32_t x = 5;
+    int32_t y = 122;
+    int32_t z = -8;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -23,7 +30,7 @@ int main()
 
     // construct string to open region file
     std::stringstream filePath;
-    filePath << "./test_world/region/r." << regionX << "." << regionZ << ".mca";
+    filePath << PROJECT_SOURCE_DIR << "/test_world/region/r." << regionX << "." << regionZ << ".mca"; // PROJECT_SOURCE_DIR defined in CMakeLists.txt
 
     // open region file
     std::ifstream inputFile(filePath.str(), std::ios::binary);
@@ -35,25 +42,99 @@ int main()
     }
     
     // Find chunk_table_offset, this table then gives offset into file for chunk
-    int chunk_table_offset = 4 * ((chunkX & 31) + (chunkZ & 31) * 32);
+    int chunk_table_offset = ((chunkX & 31) + ((chunkZ & 31) >> 5)) >> 2;
 
     // seek pointer to offset
     inputFile.seekg(chunk_table_offset, std::ios::beg);
 
     // Read 4 bytes, the first 3 are the offset, the last is sector count
-    unsigned char bytes[4];
-    inputFile.read(reinterpret_cast<char*>(bytes), 4);
+    unsigned char table_bytes[4];
+    inputFile.read(reinterpret_cast<char*>(table_bytes), 4);
 
     // Convert bytes to a big-endian left shifted by 12. (In order to seek to the 4KiB = 4096B offset)
-    uint32_t offset = (bytes[0] << 28) | (bytes[1] << 20) | bytes[2] << 12;
+    uint32_t offset = (table_bytes[0] << 28) | (table_bytes[1] << 20) | table_bytes[2] << 12;
     std::cout << "Offset: " << offset << std::endl;
 
-    if ((offset | bytes[3]) == 0){
+    if ((offset | table_bytes[3]) == 0){
         std::cout << "Chunk does not exist" << std::endl;
-        std::cout << "offset: " << offset << "\tsector count: " << bytes[3] << std::endl;
-        std::cout << (offset | bytes[3]) << std::endl;
+        std::cout << "offset: " << offset << "\tsector count: " << table_bytes[3] << std::endl;
+        std::cout << (offset | table_bytes[3]) << std::endl;
         return 1;
     }
+
+    // Seek to offset
+    inputFile.seekg(offset, std::ios::beg);
+
+    // Read byte count and compression format
+    char chunk_header[5];
+    inputFile.read(reinterpret_cast<char*>(chunk_header), 5);
+
+    // Check if the chunk is not compressed with zlib
+    if (chunk_header[4] != 2) std::cout << "Chunk at offset: " << offset << " not compressed with zlib... exiting." << std::endl;
+
+    // Interpret size
+    uint32_t size = ((chunk_header[0] << 24) | (chunk_header[1] << 16) | (chunk_header[2] << 8) | chunk_header[3]) - 1;
+
+    // Collect data
+    uint8_t compressed[size];
+    inputFile.read(reinterpret_cast<char*>(compressed), size);
+
+    std::vector<uint8_t> data = helpers::uncompress_chunk(compressed, size);
+
+    // Find sections tag
+    // Read 3 bytes. 1st is tag type, 2nd and 3rd is big endian ordered length of name string
+    // Read string_length bytes.
+
+    helpers::hexDumpVectorToFile(data, "chunk");
+
+    std::vector<uint8_t>::iterator iterator = data.begin() + 3; // skip the first 3 bytes as it describes overarching compound tag.
+
+    uint8_t i = 0;
+    uint8_t maxIters = 6;
+    bool sectionsFound = false;
+    while (!sectionsFound && i < maxIters) {
+        Tag tag = static_cast<Tag>(*iterator);
+
+        uint16_t nameLength = (*(iterator + 1) << 8) | (*(iterator + 2));
+        char nameArray[nameLength + 1];
+        helpers::strcpy(iterator + 3, nameArray, nameLength);
+        std::cout << "Tag: " << helpers::toStr(tag) << "\tName Length: " << nameLength << "\tName: " << nameArray << std::endl;
+
+        iterator += 3 + nameLength;
+
+        // iterator is at start of payload
+        switch (tag) {
+            case(Tag::String): {
+                uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
+                char stringArray[stringLength + 1];
+                helpers::strcpy(iterator+2, stringArray, stringLength);
+                std::cout << stringArray << std::endl;
+
+                iterator += 2 + stringLength;
+                break;
+            }
+    
+            case(Tag::Int): {
+                iterator += helpers::getPayloadLength(Tag::Int);
+                break;
+            }
+            
+            case(Tag::List): {
+                uint8_t payloadTagLength =  helpers::getPayloadLength(*iterator);
+                uint32_t listLength = (*(iterator + 1) << 24) | (*(iterator + 2) << 16) | (*(iterator + 3) << 8) | (*(iterator + 4));
+                iterator += 5 + (payloadTagLength * listLength);
+                break;
+            }
+
+            case (Tag::Long): {
+                iterator += helpers::getPayloadLength(Tag::Long);
+                break;
+            }
+        }
+        i++;
+    }
+
+
 
     inputFile.close();
     return 0;

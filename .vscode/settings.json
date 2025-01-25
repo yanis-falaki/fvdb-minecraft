@@ -69,5 +69,6 @@
         "fstream": "cpp",
         "sstream": "cpp"
     },
-    "cmake.sourceDirectory": "/home/yanisf/Documents/coding/fvdb-playground/minecraft-serialization/cpp",
+    "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/cpp",
+    "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/cpp/build",
 }

@@ -5,9 +5,6 @@ project(SerializerExample)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Fix for vscode preprocessing directive linting errors
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # Find zlib
 find_package(ZLIB REQUIRED)
 

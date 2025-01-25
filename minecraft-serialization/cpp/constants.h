@@ -22,8 +22,10 @@ enum class Tag {
     Long_Array = 12
 };
 
+
+// If the payload could have variable length or requires special preprocessing then length is set to 0
 const uint8_t payloadLengthMap[] = {
-    0,   // End
+    1,   // End,
     1,   // Byte
     2,   // Short
     4,   // Int

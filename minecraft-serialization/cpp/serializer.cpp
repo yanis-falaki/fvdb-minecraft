@@ -10,6 +10,105 @@
 
 using namespace constants;
 
+void exploreCompound(std::vector<uint8_t>::iterator& iterator);
+
+
+void exploreList(std::vector<uint8_t>::iterator& iterator) {
+    uint8_t payloadTagLength =  helpers::getPayloadLength(*iterator);
+    Tag list_tag = static_cast<Tag>(*iterator);
+
+    std::cout << "List Tag: " << helpers::toStr(list_tag) << std::endl;
+    uint32_t listLength = (*(iterator + 1) << 24) | (*(iterator + 2) << 16) | (*(iterator + 3) << 8) | (*(iterator + 4));
+
+    iterator += 5 + (payloadTagLength * listLength);
+
+    // If atypical list_tag, then the iterator will have only jumped 5 units as payloadTagLength will be zero
+    if (list_tag == Tag::Compound) {
+        for (int i = 0; i < listLength; ++i) exploreCompound(iterator);
+    }
+    else if (list_tag == Tag::String) {
+        for (int i = 0; i < listLength; ++i) {
+            iterator += 2 + ((*iterator << 8) | (*(iterator + 1))); // 2 bytes for length storage, + length bytes for string content. 
+        }
+    }
+    else if (list_tag == Tag::List) {
+        for (int i = 0; i < listLength; ++i) {
+            exploreList(iterator);
+        }
+    }
+}
+
+void exploreCompound(std::vector<uint8_t>::iterator& iterator){
+
+    while (true) {
+        Tag tag = static_cast<Tag>(*iterator);
+
+        if (tag == Tag::End){
+            ++iterator;
+            return;
+        }
+
+        uint16_t nameLength = (*(iterator + 1) << 8) | (*(iterator + 2));
+        char nameArray[nameLength + 1];
+        helpers::strcpy(iterator + 3, nameArray, nameLength);
+        std::cout << "Tag: " << helpers::toStr(tag) << "\tName Length: " << nameLength << "\tName: " << nameArray << std::endl;
+
+        iterator += 3 + nameLength;
+
+        // iterator is at start of payload
+        switch (tag) {
+
+            case Tag::Byte:
+            case Tag::Short:
+            case Tag::Int:
+            case Tag::Long:
+            case Tag::Float:
+            case Tag::Double:
+                iterator += helpers::getPayloadLength(tag);
+                break;
+
+            case(Tag::Byte_Array): {
+                uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
+                iterator += 4 + length;
+                break;
+            }
+
+            case(Tag::String): {
+                uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
+                char stringArray[stringLength + 1];
+                helpers::strcpy(iterator+2, stringArray, stringLength);
+                std::cout << stringArray << std::endl;
+
+                iterator += 2 + stringLength;
+                break;
+            }
+
+            case(Tag::List): {
+                exploreList(iterator);
+                break;
+            }
+
+            case (Tag::Compound): {
+                exploreCompound(iterator);
+                break;
+            }
+
+            case(Tag::Int_Array): {
+                int size = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
+                iterator += 4 + size*4;
+                break;
+            }
+
+            case(Tag::Long_Array): {
+                int size = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
+                iterator += 4 + size*8;
+                break;
+            }
+        }
+    }
+}
+
+
 int main()
 {
     int32_t x = 5;
@@ -85,54 +184,9 @@ int main()
     // Read 3 bytes. 1st is tag type, 2nd and 3rd is big endian ordered length of name string
     // Read string_length bytes.
 
-    helpers::hexDumpVectorToFile(data, "chunk");
-
-    std::vector<uint8_t>::iterator iterator = data.begin() + 3; // skip the first 3 bytes as it describes overarching compound tag.
-
-    uint8_t i = 0;
-    uint8_t maxIters = 6;
-    bool sectionsFound = false;
-    while (!sectionsFound && i < maxIters) {
-        Tag tag = static_cast<Tag>(*iterator);
-
-        uint16_t nameLength = (*(iterator + 1) << 8) | (*(iterator + 2));
-        char nameArray[nameLength + 1];
-        helpers::strcpy(iterator + 3, nameArray, nameLength);
-        std::cout << "Tag: " << helpers::toStr(tag) << "\tName Length: " << nameLength << "\tName: " << nameArray << std::endl;
-
-        iterator += 3 + nameLength;
-
-        // iterator is at start of payload
-        switch (tag) {
-            case(Tag::String): {
-                uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
-                char stringArray[stringLength + 1];
-                helpers::strcpy(iterator+2, stringArray, stringLength);
-                std::cout << stringArray << std::endl;
-
-                iterator += 2 + stringLength;
-                break;
-            }
+    std::vector<uint8_t>::iterator iterator = data.begin(); // skip the first 3 bytes as it describes overarching compound tag.
     
-            case(Tag::Int): {
-                iterator += helpers::getPayloadLength(Tag::Int);
-                break;
-            }
-            
-            case(Tag::List): {
-                uint8_t payloadTagLength =  helpers::getPayloadLength(*iterator);
-                uint32_t listLength = (*(iterator + 1) << 24) | (*(iterator + 2) << 16) | (*(iterator + 3) << 8) | (*(iterator + 4));
-                iterator += 5 + (payloadTagLength * listLength);
-                break;
-            }
-
-            case (Tag::Long): {
-                iterator += helpers::getPayloadLength(Tag::Long);
-                break;
-            }
-        }
-        i++;
-    }
+   exploreCompound(iterator);
 
 
 

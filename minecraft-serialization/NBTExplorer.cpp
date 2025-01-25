@@ -21,8 +21,10 @@ https://minecraft.fandom.com/wiki/NBT_format
 
 using namespace constants;
 
-void exploreCompound(std::vector<uint8_t>::iterator& iterator);
-void exploreList(std::vector<uint8_t>::iterator& iterator);
+template<typename IterType>
+void exploreCompound(IterType& iterator);
+template<typename IterType>
+void exploreList(IterType& iterator);
 
 int main()
 {
@@ -105,7 +107,8 @@ int main()
     return 0;
 }
 
-void exploreCompound(std::vector<uint8_t>::iterator& iterator){
+template<typename IterType>
+void exploreCompound(IterType& iterator){
     while (true) {
         Tag tag = static_cast<Tag>(*iterator);
 
@@ -174,7 +177,8 @@ void exploreCompound(std::vector<uint8_t>::iterator& iterator){
     }
 }
 
-void exploreList(std::vector<uint8_t>::iterator& iterator) {
+template<typename IterType>
+void exploreList(IterType& iterator) {
     uint8_t payloadTagLength =  helpers::getPayloadLength(*iterator);
     Tag list_tag = static_cast<Tag>(*iterator);
 

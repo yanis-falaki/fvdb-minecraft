@@ -116,6 +116,31 @@ std::vector<uint8_t> uncompress_chunk(const uint8_t* compressed_data, uLong comp
     }
 }
 
+uint8_t* uncompress_chunk(const uint8_t* compressed_data, uLong compressed_size, uint32_t& uncompressed_size) {
+    uLong dest_len = compressed_size * 10;
+    uint8_t* destination = new uint8_t[dest_len];
+    
+    while (true) {
+        int result = uncompress(destination, &dest_len, compressed_data, compressed_size);
+        
+        if (result == Z_OK) {
+            uncompressed_size = dest_len;
+            return destination;
+        }
+        
+        if (result == Z_BUF_ERROR) {
+            delete[] destination;
+            dest_len *= 2;
+            destination = new uint8_t[dest_len];
+            continue;
+        }
+        
+        delete[] destination;
+        throw std::runtime_error("Decompression failed");
+    }
+}
+
+
 // --------------------------> Tags <--------------------------
 
 // Function to convert Tag to string
@@ -148,13 +173,14 @@ inline uint8_t getPayloadLength(uint8_t tag) {
 
 // --------------------------> strcpy <--------------------------
 
-void strcpy(std::vector<uint8_t>::iterator iterator, char* dest, uint8_t n) {
+template <typename IteratorType>
+inline void strcpy(IteratorType iterator, char* dest, uint8_t n) {
     dest[n] = '\0';
     for (int i = 0; i < n; ++i) {
         dest[i] = *(iterator + i);
     }
     
-} 
+}
 
 
 } // namespace helpers

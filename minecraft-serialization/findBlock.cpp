@@ -22,9 +22,14 @@ https://minecraft.fandom.com/wiki/NBT_format
 
 using namespace constants;
 
-void getBlockFromSection(std::vector<uint8_t>::iterator& iterator, int32_t x, int32_t y, int32_t z);
-bool exploreCompound(std::vector<uint8_t>::iterator& iterator);
-void exploreList(std::vector<uint8_t>::iterator& iterator);
+template<typename IterType>
+void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z);
+
+template<typename IterType>
+bool exploreCompound(IterType& iterator);
+
+template<typename IterType>
+void exploreList(IterType& iterator);
 
 int main()
 {
@@ -95,9 +100,10 @@ int main()
     uint8_t compressed[size];
     inputFile.read(reinterpret_cast<char*>(compressed), size);
 
-    std::vector<uint8_t> data = helpers::uncompress_chunk(compressed, size);
+    uint32_t uncompressedSize;
+    uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
 
-    std::vector<uint8_t>::iterator iterator = data.begin(); // skip the first 3 bytes as it describes overarching compound tag.
+    uint8_t* iterator = data; // skip the first 3 bytes as it describes overarching compound tag.
     
     // skip everything until getting to sections, list of compounds
     bool foundSections = exploreCompound(iterator);
@@ -109,11 +115,13 @@ int main()
     return 0;
 }
 
-void getBlockFromSection(std::vector<uint8_t>::iterator& iterator, int32_t x, int32_t y, int32_t z) {
+template<typename IterType>
+void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z) {
     std::cout << "y: " << (y >> 4) << std::endl;
 }
 
-bool exploreCompound(std::vector<uint8_t>::iterator& iterator){
+template<typename IterType>
+bool exploreCompound(IterType& iterator){
     while (true) {
         Tag tag = static_cast<Tag>(*iterator);
 
@@ -185,7 +193,8 @@ bool exploreCompound(std::vector<uint8_t>::iterator& iterator){
     }
 }
 
-void exploreList(std::vector<uint8_t>::iterator& iterator) {
+template<typename IterType>
+void exploreList(IterType& iterator) {
     uint8_t payloadTagLength =  helpers::getPayloadLength(*iterator);
     Tag list_tag = static_cast<Tag>(*iterator);
 

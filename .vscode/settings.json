@@ -69,6 +69,6 @@
         "fstream": "cpp",
         "sstream": "cpp"
     },
-    "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/cpp",
-    "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/cpp/build",
+    "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/",
+    "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/build",
 }

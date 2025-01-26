@@ -91,9 +91,9 @@ int main()
     iterator += 5;
 
     NBTParser::SectionPack sectionPack;
-    NBTParser::sectionCompoundStrategy(iterator, sectionPack);
+    NBTParser::sectionCompound(iterator, sectionPack);
 
-    std::cout << "Section y: " << sectionPack.y << std::endl;
+    std::cout << "Section y: " << sectionPack.y << "\tData Length: " << sectionPack.blockStates.dataListLength << std::endl;
 
     inputFile.close();
     return 0;

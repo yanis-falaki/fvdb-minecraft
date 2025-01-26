@@ -19,9 +19,19 @@ https://minecraft.fandom.com/wiki/NBT_format
 namespace NBTParser {
 
 
+// --------------------------> Parameter Pack Forward Declarations <--------------------------
+
+struct BlockStatesPack;
+struct SectionPack;
+
+// --------------------------> Compound Strategy Forward Declarations <--------------------------
+
 bool findSectionsList(uint8_t*& iterator);
 void printNBTStructure(uint8_t*& iterator);
 inline bool skipNBTStructure(uint8_t*& iterator);
+inline void blockStatesCompound(uint8_t*& iterator, BlockStatesPack& blockStatesPack);
+
+// --------------------------> List Strategy Forward Declarations <--------------------------
 
 inline void printList(uint8_t*& iterator);
 inline void skipList(uint8_t*& iterator);
@@ -301,15 +311,15 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
 }
 
 // --------------------------> Parameter Packs <--------------------------
-struct BlockStatePack {
+struct BlockStatesPack {
     uint8_t* dataListPointer;
     uint32_t dataListLength;
 
-    BlockStatePack() = default;
+    BlockStatesPack() = default;
 };
 
 struct SectionPack {
-    BlockStatePack blockState;
+    BlockStatesPack blockStates;
     int32_t y;
 
     SectionPack() = default;
@@ -413,32 +423,31 @@ struct SectionCompoundStrategy {
         return false;
     }
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
-        return skipNBTStructure(iterator);
+        blockStatesCompound(iterator, sectionPack.blockStates);
+        return false;
     }
     inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
     inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
 };
 
 struct BlockStatesCompoundStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {}
+    inline void preamble(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {}
+    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {}
     template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {
-        std::cerr << "Encountered a non Byte numeric tag" << std::endl;
-    }
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatePack& blockStatePack) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, BlockStatePack& blockStatePack) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {
+    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {}
+    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {}
+    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, BlockStatesPack& blockStatesPack) {}
+    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
         skipList(iterator);
         return false;
     }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {
+    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
         return skipNBTStructure(iterator);
     }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatePack& blockStatePack) {}
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatePack& blockStatePack) {
-        blockStatePack.dataListLength = length;
-        blockStatePack.dataListPointer = iterator + 4;
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {
+        blockStatesPack.dataListLength = length;
+        blockStatesPack.dataListPointer = iterator + 4;
     }
 };
 
@@ -462,14 +471,14 @@ inline void printNBTStructure(uint8_t*& iterator) {
     parseNBTStructure(iterator, strategy);
 }
 
-inline void sectionCompoundStrategy(uint8_t*& iterator, SectionPack& sectionPack) {
+inline void sectionCompound(uint8_t*& iterator, SectionPack& sectionPack) {
     SectionCompoundStrategy strategy;
     parseNBTStructure(iterator, strategy, sectionPack);
 }
 
-inline void blockStatesCompoundStrategy(uint8_t*& iterator, BlockStatePack& blockStatePack) {
+inline void blockStatesCompound(uint8_t*& iterator, BlockStatesPack& blockStatesPack) {
     BlockStatesCompoundStrategy strategy;
-    parseNBTStructure(iterator, strategy, blockStatePack);
+    parseNBTStructure(iterator, strategy, blockStatesPack);
 }
 
 // --------------------------> exploreList <--------------------------

@@ -406,19 +406,13 @@ void exploreList(auto& iterator, ListStrategy listStrategy) {
 
     // If atypical list_tag, then the iterator will have only jumped 5 units as payloadTagLength will be zero
     if (list_tag == Tag::Compound) {
-        for (int i = 0; i < listLength; ++i) listStrategy.handleCompound(iterator);
+        listStrategy.handleCompound(iterator, listLength);
     }
     else if (list_tag == Tag::String) {
-        for (int i = 0; i < listLength; ++i) {
-            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
-            listStrategy.handleString(iterator, stringLength);
-            iterator += 2 + stringLength;
-        }
+        listStrategy.handleString(iterator, listLength);
     }
     else if (list_tag == Tag::List) {
-        for (int i = 0; i < listLength; ++i) {
-            listStrategy.handleList(iterator);
-        }
+        listStrategy.handleList(iterator, listLength);
     }
 }
 
@@ -433,18 +427,24 @@ struct PrintListStrategy {
         std::cout << toStr(list_tag) << " List of size: " << listLength << std::endl;
     }
 
-    inline void handleCompound(auto& iterator) {
-        printNBTStructure(iterator);
+    inline void handleCompound(auto& iterator, uint32_t listLength) {
+        for (int i = 0; i < listLength; ++i) printNBTStructure(iterator);
     }
 
-    inline void handleString(auto iterator, uint16_t stringLength) {
-        char stringArray[stringLength + 1];
-        helpers::strcpy(iterator+2, stringArray, stringLength);
-        std::cout << stringArray << std::endl;
+    inline void handleString(auto& iterator, uint32_t listLength) {
+        for (int i = 0; i < listLength; ++i) {
+            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
+
+            char stringArray[stringLength + 1];
+            helpers::strcpy(iterator+2, stringArray, stringLength);
+            std::cout << stringArray << std::endl;
+
+            iterator += 2 + stringLength;
+        }
     }
 
-    inline void handleList(auto& iterator) {
-        printList(iterator);
+    inline void handleList(auto& iterator, uint32_t listLength) {
+        for (int i = 0; i < listLength; ++i) printList(iterator);
     }
 };
 
@@ -453,16 +453,19 @@ struct SkipListStrategy {
         return;
     }
 
-    inline void handleCompound(auto& iterator) {
-        skipNBTStructure(iterator);
+    inline void handleCompound(auto& iterator, uint32_t listLength) {
+        for (int i = 0; i < listLength; ++i) skipNBTStructure(iterator);
     }
 
-    inline void handleString(auto iterator, uint16_t stringLength) {
-        return;
+    inline void handleString(auto& iterator, uint32_t listLength) {
+        for (int i = 0; i < listLength; ++i) {
+            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
+            iterator += 2 + stringLength;
+        }
     }
 
-    inline void handleList(auto& iterator) {
-        skipList(iterator);
+    inline void handleList(auto& iterator, uint32_t listLength) {
+        for (int i = 0; i < listLength; ++i) skipList(iterator);
     }
 };
 

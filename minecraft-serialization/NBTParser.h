@@ -9,6 +9,9 @@ https://minecraft.fandom.com/wiki/Chunk_format
 https://minecraft.fandom.com/wiki/NBT_format
 */
 
+#ifndef INCLUDED_NBT_PARSER
+#define INCLUDED_NBT_PARSER
+
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -381,3 +384,5 @@ bool readSection(IterType& iterator, IterType& dataIterator, int32_t& y) {
 
     return false;
 }
+
+#endif

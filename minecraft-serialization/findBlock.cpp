@@ -79,6 +79,8 @@ int main()
     uint32_t uncompressedSize;
     uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
 
+    //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+
     uint8_t* iterator = data;
 
     // skip everything until getting to sections, list of compounds

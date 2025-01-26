@@ -1,7 +1,5 @@
 /*
-This script takes an (x, y, z) coordinate as input, and prints the nbt data of the chunk it's located in.\
-This was written for educational purposes and being kept for future reference.
-You can understand the essential NBT parsing logic by reading through this file.
+This script implements the main NBT parsing logic for a chunk within a region file.
 
 Useful resources:
 https://minecraft.fandom.com/wiki/Region_file_format
@@ -449,9 +447,7 @@ struct PrintListStrategy {
 };
 
 struct SkipListStrategy {
-    inline void preamble(Tag list_tag, int32_t listLength) {
-        return;
-    }
+    inline void preamble(Tag list_tag, int32_t listLength) {}
 
     inline void handleCompound(auto& iterator, uint32_t listLength) {
         for (int i = 0; i < listLength; ++i) skipNBTStructure(iterator);

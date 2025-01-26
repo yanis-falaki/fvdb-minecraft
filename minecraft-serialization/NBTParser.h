@@ -168,8 +168,8 @@ TagAndName parseTagAndName(IteratorType& iterator) {
 
 // --------------------------> readNum <--------------------------
 
-template<Tag NumT, typename IterType>
-inline typename TagType<NumT>::Type readNum(IterType&& iterator) {
+template<Tag NumT>
+inline typename TagType<NumT>::Type readNum(auto&& iterator) {
    static_assert((NumT == Tag::Byte) || (NumT == Tag::Short) || (NumT == Tag::Int) ||
                  (NumT == Tag::Long) || (NumT == Tag::Float) || (NumT == Tag::Double));
 
@@ -233,7 +233,7 @@ bool parseNBTStructure(auto& iterator, Strategy& strategy) {
 
         switch (tagAndName.tag) {
             case Tag::Byte: 
-                strategy.template handleNumericTag<Tag::Byte>(iterator, tagAndName);
+                strategy.template handleByteTag(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Byte);
                 break;
             case Tag::Short: 
@@ -300,6 +300,7 @@ bool parseNBTStructure(auto& iterator, Strategy& strategy) {
 
 struct FindSectionsListStrategy {
     inline void preamble(auto& iterator, const auto& tagAndName) {}
+    inline void handleByteTag(auto& iterator, const auto& tagAndName) {}
     template<Tag NumTag>
     inline void handleNumericTag(auto& iterator, const auto& tagAndName) {}
     inline void handleByteArray(auto& iterator, const auto& tagAndName, uint32_t length) {}
@@ -317,6 +318,7 @@ struct FindSectionsListStrategy {
 
 struct SkipNBTStructureStrategy {
     inline void preamble(auto& iterator, const auto& tagAndName) {}
+    inline void handleByteTag(auto& iterator, const auto& tagAndName) {}
     template<Tag NumTag>
     inline void handleNumericTag(auto& iterator, const auto& tagAndName) {}
     inline void handleByteArray(auto& iterator, const auto& tagAndName, uint32_t length) {}
@@ -335,14 +337,15 @@ struct PrintNBTStructureStrategy {
         std::cout << "Tag: " << toStr(tagAndName.tag) << "\tName: " << tagAndName.name << std::endl;
     }
 
+    inline void handleByteTag(auto& iterator, const auto& tagAndName) {
+        auto value = readNum<Tag::Byte>(iterator);
+        std::cout << "Value: " << static_cast<int>(value) << std::endl;
+    }
+
     template<Tag NumTag>
     inline void handleNumericTag(auto& iterator, const auto& tagAndName) {
-        auto value = readNum<NumTag, decltype(iterator)>(iterator);
-        if constexpr (NumTag == NBTParser::Tag::Byte) {
-            std::cout << "Value: " << static_cast<int>(value) << std::endl;
-        } else {
-            std::cout << "Value: " << value << std::endl;
-        }
+        auto value = readNum<NumTag>(iterator);
+        std::cout << "Value: " << value << std::endl;
     }
 
     inline void handleByteArray(auto& iterator, const auto& tagAndName, uint32_t length) {
@@ -368,6 +371,29 @@ struct PrintNBTStructureStrategy {
         return false;
     }
 };
+
+/*
+struct SectionCompoundStrategy {
+    inline void preamble(auto& iterator, const auto& tagAndName) {}
+    template<Tag NumTag>
+    inline void handleNumericTag(auto& iterator, const auto& tagAndName, int32_t& y) {
+        if constexpr (NumTag == Tag::Byte) {
+            y = readNum<Tag::Byte>(iterator);
+        } else {
+            std::cerr << "Encountered a non Byte numeric tag"
+        }
+    }
+    inline void handleByteArray(auto& iterator, const auto& tagAndName, uint32_t length) {}
+    inline void handleString(auto& iterator, const auto& tagAndName, uint16_t stringLength) {}
+    inline bool handleList(auto& iterator, const auto& tagAndName) {
+        skipList(iterator);
+        return false;
+    }
+    inline bool handleCompound(auto& iterator, const auto& tagAndName) {
+        return skipNBTStructure(iterator);
+    }
+};
+*/
 
 // --------------------------> Strategy Wrappers <--------------------------
 inline bool findSectionsList(auto& iterator) {

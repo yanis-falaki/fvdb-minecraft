@@ -48,25 +48,6 @@ enum class Tag {
     Long_Array = 12
 };
 
-// --------------------------> payloadLengthMap <--------------------------
-
-// If the payload could have variable length or requires special preprocessing then length is set to 0
-const uint8_t PAYLOAD_LENGTH_MAP[] = {
-    1,   // End,
-    1,   // Byte
-    2,   // Short
-    4,   // Int
-    8,   // Long
-    4,   // Float
-    8,   // Double
-    0,  // Byte_Array
-    0,  // String
-    0,  // List
-    0,  // Compound
-    0,  // Int_Array
-    0   // Long_Array
-};
-
 // --------------------------> TagType <--------------------------
 
 template<Tag T>
@@ -123,6 +104,25 @@ inline const char* toStr(Tag tag) {
         default:                 return "Unknown";
     }
 }
+
+// --------------------------> payloadLengthMap <--------------------------
+
+// If the payload could have variable length or requires special preprocessing then length is set to 0
+const uint8_t PAYLOAD_LENGTH_MAP[] = {
+    1,   // End,
+    1,   // Byte
+    2,   // Short
+    4,   // Int
+    8,   // Long
+    4,   // Float
+    8,   // Double
+    0,  // Byte_Array
+    0,  // String
+    0,  // List
+    0,  // Compound
+    0,  // Int_Array
+    0   // Long_Array
+};
 
 // --------------------------> getPayloadLength <--------------------------
 

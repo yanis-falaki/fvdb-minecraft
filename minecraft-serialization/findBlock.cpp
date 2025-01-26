@@ -80,12 +80,12 @@ int main()
     uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
 
     uint8_t* iterator = data; // skip the first 3 bytes as it describes overarching compound tag.
-    
+
     // skip everything until getting to sections, list of compounds
-    bool foundSections = exploreCompound(iterator);
+    bool foundSections = NBTParser::findSectionsList(iterator);
     std::cout << "Found Sections: " << foundSections << std::endl;
 
-    getBlockFromSection(iterator, x, y, z);
+    NBTParser::getBlockFromSectionsList(iterator, x, y, z);
 
     inputFile.close();
     return 0;

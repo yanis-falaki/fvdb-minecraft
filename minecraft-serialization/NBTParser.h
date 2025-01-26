@@ -18,17 +18,20 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <helpers.h>
 #include <cstring>
 
-template<typename IterType>
-bool exploreCompound(IterType& iterator);
+namespace NBTParser {
+
+
+bool findSectionsList(auto& iterator);
+void printNBTStructure(auto& iterator);
 
 template<typename IterType>
 void exploreList(IterType& iterator);
 
 template<typename IterType>
-void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z);
+void getBlockFromSectionsList(IterType& iterator, int32_t x, int32_t y, int32_t z);
 
 template<typename IterType>
-bool readSection(IterType& iterator, IterType& dataIterator, int32_t& y);
+void readSection(IterType& iterator, IterType& dataIterator, int32_t& y);
 
 // --------------------------> Tags enum <--------------------------
 
@@ -173,7 +176,7 @@ TagAndName parseTagAndName(IteratorType& iterator) {
 // --------------------------> Read Tag <--------------------------
 
 template<Tag NumT, typename IterType>
-inline typename TagType<NumT>::Type readNum(IterType& iterator) {
+inline typename TagType<NumT>::Type readNum(IterType&& iterator) {
    static_assert((NumT == Tag::Byte) || (NumT == Tag::Short) || (NumT == Tag::Int) ||
                  (NumT == Tag::Long) || (NumT == Tag::Float) || (NumT == Tag::Double));
 
@@ -226,87 +229,138 @@ inline typename TagType<NumT>::Type readNum(IterType& iterator) {
    }
 }
 
-// --------------------------> exploreCompound <--------------------------
+// --------------------------> ParsingStrategies <--------------------------
 
-template<typename IterType>
-bool exploreCompound(IterType& iterator){
+struct FindSectionsListStrategy {
+    inline void preamble(auto& iterator, const auto& tagAndName) {
+        return;
+    }
+
+    template<Tag NumTag>
+    inline void handleNumericTag(auto& iterator, const auto& tagAndName) {
+    }
+
+    inline void handleByteArray(auto& iterator, const auto& tagAndName, uint32_t length) {}
+    inline void handleString(auto& iterator, const auto& tagAndName, uint16_t stringLength) {}
+
+    inline bool handleList(auto& iterator, const auto& tagAndName) {
+        if (tagAndName.name == "sections") return true;
+        exploreList(iterator);
+        return false;
+    }
+
+    inline bool handleCompound(auto& iterator, const auto& tagAndName) {
+        return findSectionsList(iterator);
+    }
+};
+
+// Example strategy for printNBTStructure
+struct PrintNBTStructureStrategy {
+    inline void preamble(auto& iterator, const auto& tagAndName) {
+        std::cout << "Tag: " << toStr(tagAndName.tag) << "\tName: " << tagAndName.name << std::endl;
+    }
+
+    template<Tag NumTag>
+    inline void handleNumericTag(auto& iterator, const auto& tagAndName) {
+        auto value = readNum<NumTag, decltype(iterator)>(iterator);
+        if constexpr (NumTag == NBTParser::Tag::Byte) {
+            std::cout << "Value: " << static_cast<int>(value) << std::endl;
+        } else {
+            std::cout << "Value: " << value << std::endl;
+        }
+    }
+
+    inline void handleByteArray(auto& iterator, const auto& tagAndName, uint32_t length) {
+        for (int i = 0; i < length; ++i) {
+            std::cout << (short)(*(iterator + 4 + i));
+        }
+        std::cout << std::endl;
+    }
+
+    inline void handleString(auto& iterator, const auto& tagAndName, uint16_t stringLength) {
+        char stringArray[stringLength + 1];
+        helpers::strcpy(iterator+2, stringArray, stringLength);
+        std::cout << stringArray << std::endl;
+    }
+
+    inline bool handleList(auto& iterator, const auto& tagAndName) {
+        exploreList(iterator);
+        return false;
+    }
+
+    inline bool handleCompound(auto& iterator, const auto& tagAndName) {
+        printNBTStructure(iterator);
+        return false;
+    }
+};
+
+
+// --------------------------> findSectionsList <--------------------------
+
+template<typename Strategy>
+bool parseNBTStructure(auto& iterator, Strategy& strategy) {
     while (true) {
         auto tagAndName = parseTagAndName(iterator);
-
+        strategy.template preamble(iterator, tagAndName); // optional printing
         if (tagAndName.isEnd) return false;
 
-        //std::cout << "Tag: " << toStr(tagAndName.tag) << "\tName: " << tagAndName.name << std::endl;
-
-        // iterator is at start of payload
         switch (tagAndName.tag) {
-
-            case Tag::Byte: {
-                auto value = readNum<Tag::Byte, decltype(iterator)>(iterator);
+            case Tag::Byte: 
+                strategy.template handleNumericTag<Tag::Byte>(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Byte);
                 break;
-            }
-            case Tag::Short: {
-                auto value = readNum<Tag::Short, decltype(iterator)>(iterator);
+            case Tag::Short: 
+                strategy.template handleNumericTag<Tag::Short>(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Short);
                 break;
-            }
-            case Tag::Int: {
-                auto value = readNum<Tag::Int, decltype(iterator)>(iterator);
+            case Tag::Int: 
+                strategy.template handleNumericTag<Tag::Int>(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Int);
                 break;
-            }
-            case Tag::Long: {
-                auto value = readNum<Tag::Long, decltype(iterator)>(iterator);
+            case Tag::Long: 
+                strategy.template handleNumericTag<Tag::Long>(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Long);
                 break;
-            }
-            case Tag::Float: {
-                auto value = readNum<Tag::Float, decltype(iterator)>(iterator);
+            case Tag::Float: 
+                strategy.template handleNumericTag<Tag::Float>(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Float);
                 break;
-            }
-            case Tag::Double: {
-                auto value = readNum<Tag::Double, decltype(iterator)>(iterator);
+            case Tag::Double: 
+                strategy.template handleNumericTag<Tag::Double>(iterator, tagAndName);
                 iterator += getPayloadLength(Tag::Double);
                 break;
-            }
 
-            case(Tag::Byte_Array): {
+            case Tag::Byte_Array: {
                 uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
+                strategy.handleByteArray(iterator, tagAndName, length);
                 iterator += 4 + length;
                 break;
             }
 
-            case(Tag::String): {
+            case Tag::String: {
                 uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
-                //char stringArray[stringLength + 1];
-                //helpers::strcpy(iterator+2, stringArray, stringLength);
-                //std::cout << stringArray << std::endl;
-
+                strategy.handleString(iterator, tagAndName, stringLength);
                 iterator += 2 + stringLength;
                 break;
             }
 
-            case(Tag::List): {
-                if (static_cast<Tag>(*iterator) == Tag::Compound && tagAndName.name == "sections")
-                    return true;
-                exploreList(iterator);
+            case Tag::List: {
+                if (strategy.handleList(iterator, tagAndName)) return true;
                 break;
             }
 
-            case (Tag::Compound): {
-                bool foundSections = exploreCompound(iterator);
-                if (foundSections) return true;
+            case Tag::Compound: {
+                if (strategy.handleCompound(iterator, tagAndName)) return true;
                 break;
             }
 
-            case(Tag::Int_Array): {
+            case Tag::Int_Array: {
                 int size = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
                 iterator += 4 + size*4;
                 break;
             }
 
-            case(Tag::Long_Array): {
+            case Tag::Long_Array: {
                 int size = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
                 iterator += 4 + size*8;
                 break;
@@ -315,21 +369,35 @@ bool exploreCompound(IterType& iterator){
     }
 }
 
+// Wrapper functions to maintain original signatures
+inline bool findSectionsList(auto& iterator) {
+    FindSectionsListStrategy strategy;
+    return parseNBTStructure(iterator, strategy);
+}
+
+inline void printNBTStructure(auto& iterator) {
+    PrintNBTStructureStrategy strategy;
+    parseNBTStructure(iterator, strategy);
+}
 // --------------------------> exploreList <--------------------------
 
 template<typename IterType>
 void exploreList(IterType& iterator) {
     uint8_t payloadTagLength =  getPayloadLength(*iterator);
     Tag list_tag = static_cast<Tag>(*iterator);
-
-    //std::cout << "List Tag: " << toStr(list_tag) << std::endl;
-    uint32_t listLength = (*(iterator + 1) << 24) | (*(iterator + 2) << 16) | (*(iterator + 3) << 8) | (*(iterator + 4));
+    int32_t listLength = readNum<Tag::Int>(iterator+1);
 
     iterator += 5 + (payloadTagLength * listLength);
 
+    if (list_tag == Tag::End){
+        std::cout << "Empty List" << std::endl;
+        return;
+    }
+    std::cout << toStr(list_tag) << " List" << std::endl;
+
     // If atypical list_tag, then the iterator will have only jumped 5 units as payloadTagLength will be zero
     if (list_tag == Tag::Compound) {
-        for (int i = 0; i < listLength; ++i) exploreCompound(iterator);
+        for (int i = 0; i < listLength; ++i) printNBTStructure(iterator);
     }
     else if (list_tag == Tag::String) {
         for (int i = 0; i < listLength; ++i) {
@@ -344,11 +412,19 @@ void exploreList(IterType& iterator) {
 }
 
 template<typename IterType>
-void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z) {
-    uint32_t listLength = (*(iterator + 1) << 24) | (*(iterator + 2) << 16) | (*(iterator + 3) << 8) | (*(iterator + 4));
-    int32_t section = y >> 4; // Y attribute we're looking for
+void getBlockFromSectionsList(IterType& iterator, int32_t x, int32_t y, int32_t z) {
 
-    //readSection(iterator + 5, section);
+    auto listLength = readNum<Tag::Int>(iterator+1);
+    iterator += 5; // skipping past list tag and length
+
+    int32_t desired_y = y >> 4; // Y attribute we're looking for
+
+    int32_t section_y;
+    IterType dataIterator;
+
+    for (int i = 0; i < listLength; i++){
+        readSection(iterator, dataIterator, section_y);
+    }
 }
 
 
@@ -358,31 +434,41 @@ void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z) {
 /// @param y Desired y level
 /// @return 
 template<typename IterType>
-bool readSection(IterType& iterator, IterType& dataIterator, int32_t& y) {
+void readSection(IterType& iterator, IterType& dataIterator, int32_t& y) {
 
     while(true) {
         auto tagAndName = parseTagAndName(iterator);
         
         std::cout << tagAndName.name << std::endl;
+        if (tagAndName.isEnd) break;
 
 
-        if (tagAndName.name == "block_state") {
-
+        if (tagAndName.name == "block_states") {
+            findSectionsList(iterator);
         }
         else if (tagAndName.name == "Y") {
+            auto y = readNum<Tag::Byte, decltype(iterator)>(iterator);
+            iterator += getPayloadLength(Tag::Byte);
+            std::cout << (int32_t)y << std::endl;
+            break;
         }
         else if (tagAndName.name == "biomes"){
-
+            findSectionsList(iterator);
         }
         else if (tagAndName.name == "BlockLight"){
-
+           iterator += 2048;
         }
         else if (tagAndName.name == "SkyLight"){
-
+            iterator += 2048;
+        }
+        else {
+            std::cerr << "Tag name not recognized!: " << tagAndName.name << std::endl;
+            throw std::runtime_error("");
         }
     }
-
-    return false;
 }
+
+
+} // namespace NBTParser
 
 #endif

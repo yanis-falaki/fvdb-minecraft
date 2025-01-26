@@ -284,14 +284,16 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, ExtraArgs&&... ex
             }
 
             case Tag::Int_Array: {
-                int size = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                iterator += 4 + size*4;
+                int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
+                strategy.handleIntArray(iterator, tagAndName, length, std::forward<ExtraArgs>(extraArgs)...);
+                iterator += 4 + length*4;
                 break;
             }
 
             case Tag::Long_Array: {
-                int size = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                iterator += 4 + size*8;
+                int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
+                strategy.handleLongArray(iterator, tagAndName, length, std::forward<ExtraArgs>(extraArgs)...);
+                iterator += 4 + length*8;
                 break;
             }
         }
@@ -316,6 +318,8 @@ struct FindSectionsListStrategy {
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName) {
         return skipNBTStructure(iterator);
     }
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
 };
 
 struct SkipNBTStructureStrategy {
@@ -332,6 +336,8 @@ struct SkipNBTStructureStrategy {
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName) {
         return skipNBTStructure(iterator);
     }
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
 };
 
 struct PrintNBTStructureStrategy {
@@ -372,8 +378,9 @@ struct PrintNBTStructureStrategy {
         printNBTStructure(iterator);
         return false;
     }
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
 };
-
 
 struct SectionCompoundStrategy {
     inline void preamble(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {}
@@ -393,6 +400,28 @@ struct SectionCompoundStrategy {
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {
         return skipNBTStructure(iterator);
     }
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, int32_t& y) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, int32_t& y) {}
+};
+
+struct BlockStatesCompoundStrategy {
+    inline void preamble(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {}
+    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {}
+    template<Tag NumTag>
+    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {
+        std::cerr << "Encountered a non Byte numeric tag" << std::endl;
+    }
+    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, uint8_t*& dataListPointer) {}
+    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, uint8_t*& dataListPointer) {}
+    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {
+        skipList(iterator);
+        return false;
+    }
+    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {
+        return skipNBTStructure(iterator);
+    }
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, uint8_t*& dataListPointer) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, uint8_t*& dataListPointer) {}
 };
 
 
@@ -418,6 +447,11 @@ inline void printNBTStructure(uint8_t*& iterator) {
 inline void sectionCompoundStrategy(uint8_t*& iterator, int32_t& y) {
     SectionCompoundStrategy strategy;
     parseNBTStructure(iterator, strategy, y);
+}
+
+inline void blockStatesCompoundStrategy(uint8_t*& iterator, uint8_t*& dataListPointer) {
+    BlockStatesCompoundStrategy strategy;
+    parseNBTStructure(iterator, strategy, dataListPointer);
 }
 
 // --------------------------> exploreList <--------------------------

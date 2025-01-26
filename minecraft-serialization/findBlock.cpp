@@ -1,9 +1,9 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <zlib.h>
 #include <cstdint>
-#include <constants.h>
 #include <cstring>
 #include <NBTParser.h>
 

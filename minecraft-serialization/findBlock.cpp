@@ -23,13 +23,74 @@ https://minecraft.fandom.com/wiki/NBT_format
 using namespace constants;
 
 template<typename IterType>
-void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z);
-
-template<typename IterType>
 bool exploreCompound(IterType& iterator);
 
 template<typename IterType>
 void exploreList(IterType& iterator);
+
+template<typename IterType>
+void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z);
+
+template<typename IterType>
+bool readSection(IterType& iterator, IterType& dataIterator, int32_t& y);
+
+// --------------------------> Read Tag <--------------------------
+
+template<Tag NumT, typename IterType>
+inline typename TagType<NumT>::Type readNum(IterType& iterator) {
+   static_assert((NumT == Tag::Byte) || (NumT == Tag::Short) || (NumT == Tag::Int) ||
+                 (NumT == Tag::Long) || (NumT == Tag::Float) || (NumT == Tag::Double));
+
+   using ResultType = typename TagType<NumT>::Type;
+
+   if constexpr (NumT == Tag::Byte) {
+       return *iterator;
+   } else if constexpr (NumT == Tag::Short) {
+       return static_cast<ResultType>((static_cast<uint16_t>(*iterator) << 8) | static_cast<uint16_t>(*(iterator + 1)));
+   }
+   else if constexpr (NumT == Tag::Int) {
+       return static_cast<ResultType>(
+           (static_cast<uint32_t>(*iterator) << 24) | 
+           (static_cast<uint32_t>(*(iterator + 1)) << 16) | 
+           (static_cast<uint32_t>(*(iterator + 2)) << 8) | 
+           static_cast<uint32_t>(*(iterator + 3))
+       );
+   }
+   else if constexpr (NumT == Tag::Long) {
+       return static_cast<ResultType>(
+           (static_cast<uint64_t>(*iterator) << 56) | 
+           (static_cast<uint64_t>(*(iterator + 1)) << 48) | 
+           (static_cast<uint64_t>(*(iterator + 2)) << 40) | 
+           (static_cast<uint64_t>(*(iterator + 3)) << 32) |
+           (static_cast<uint64_t>(*(iterator + 4)) << 24) | 
+           (static_cast<uint64_t>(*(iterator + 5)) << 16) | 
+           (static_cast<uint64_t>(*(iterator + 6)) << 8) | 
+           static_cast<uint64_t>(*(iterator + 7))
+       );
+   }
+   else if constexpr (NumT == Tag::Float) {
+       return static_cast<ResultType>(
+           (static_cast<uint32_t>(*iterator) << 24) | 
+           (static_cast<uint32_t>(*(iterator + 1)) << 16) | 
+           (static_cast<uint32_t>(*(iterator + 2)) << 8) | 
+           static_cast<uint32_t>(*(iterator + 3))
+       );
+   }
+   else if constexpr (NumT == Tag::Double) {
+       return static_cast<ResultType>(
+           (static_cast<uint64_t>(*iterator) << 56) | 
+           (static_cast<uint64_t>(*(iterator + 1)) << 48) | 
+           (static_cast<uint64_t>(*(iterator + 2)) << 40) | 
+           (static_cast<uint64_t>(*(iterator + 3)) << 32) |
+           (static_cast<uint64_t>(*(iterator + 4)) << 24) | 
+           (static_cast<uint64_t>(*(iterator + 5)) << 16) | 
+           (static_cast<uint64_t>(*(iterator + 6)) << 8) | 
+           static_cast<uint64_t>(*(iterator + 7))
+       );
+   }
+}
+
+// --------------------------> Main Function <--------------------------
 
 int main()
 {
@@ -115,39 +176,50 @@ int main()
     return 0;
 }
 
-template<typename IterType>
-void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z) {
-    std::cout << "y: " << (y >> 4) << std::endl;
-}
+// --------------------------> exploreCompound <--------------------------
 
 template<typename IterType>
 bool exploreCompound(IterType& iterator){
     while (true) {
-        Tag tag = static_cast<Tag>(*iterator);
+        auto tagAndName = helpers::parseTagAndName(iterator);
 
-        if (tag == Tag::End){
-            ++iterator;
-            return false;
-        }
+        if (tagAndName.isEnd) return false;
 
-        uint16_t nameLength = (*(iterator + 1) << 8) | (*(iterator + 2));
-        char nameArray[nameLength + 1];
-        helpers::strcpy(iterator + 3, nameArray, nameLength);
-        //std::cout << "Tag: " << helpers::toStr(tag) << "\tName Length: " << nameLength << "\tName: " << nameArray << std::endl;
-
-        iterator += 3 + nameLength;
+        //std::cout << "Tag: " << helpers::toStr(tagAndName.tag) << "\tName: " << tagAndName.name << std::endl;
 
         // iterator is at start of payload
-        switch (tag) {
+        switch (tagAndName.tag) {
 
-            case Tag::Byte:
-            case Tag::Short:
-            case Tag::Int:
-            case Tag::Long:
-            case Tag::Float:
-            case Tag::Double:
-                iterator += helpers::getPayloadLength(tag);
+            case Tag::Byte: {
+                auto value = readNum<Tag::Byte, decltype(iterator)>(iterator);
+                iterator += helpers::getPayloadLength(tagAndName.tag);
                 break;
+            }
+            case Tag::Short: {
+                auto value = readNum<Tag::Short, decltype(iterator)>(iterator);
+                iterator += helpers::getPayloadLength(tagAndName.tag);
+                break;
+            }
+            case Tag::Int: {
+                auto value = readNum<Tag::Int, decltype(iterator)>(iterator);
+                iterator += helpers::getPayloadLength(tagAndName.tag);
+                break;
+            }
+            case Tag::Long: {
+                auto value = readNum<Tag::Long, decltype(iterator)>(iterator);
+                iterator += helpers::getPayloadLength(tagAndName.tag);
+                break;
+            }
+            case Tag::Float: {
+                auto value = readNum<Tag::Float, decltype(iterator)>(iterator);
+                iterator += helpers::getPayloadLength(tagAndName.tag);
+                break;
+            }
+            case Tag::Double: {
+                auto value = readNum<Tag::Double, decltype(iterator)>(iterator);
+                iterator += helpers::getPayloadLength(tagAndName.tag);
+                break;
+            }
 
             case(Tag::Byte_Array): {
                 uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
@@ -157,8 +229,8 @@ bool exploreCompound(IterType& iterator){
 
             case(Tag::String): {
                 uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
-                char stringArray[stringLength + 1];
-                helpers::strcpy(iterator+2, stringArray, stringLength);
+                //char stringArray[stringLength + 1];
+                //helpers::strcpy(iterator+2, stringArray, stringLength);
                 //std::cout << stringArray << std::endl;
 
                 iterator += 2 + stringLength;
@@ -166,7 +238,7 @@ bool exploreCompound(IterType& iterator){
             }
 
             case(Tag::List): {
-                if (static_cast<Tag>(*iterator) == Tag::Compound && (strcmp(nameArray, "sections") == 0))
+                if (static_cast<Tag>(*iterator) == Tag::Compound && tagAndName.name == "sections")
                     return true;
                 exploreList(iterator);
                 break;
@@ -193,6 +265,8 @@ bool exploreCompound(IterType& iterator){
     }
 }
 
+// --------------------------> exploreList <--------------------------
+
 template<typename IterType>
 void exploreList(IterType& iterator) {
     uint8_t payloadTagLength =  helpers::getPayloadLength(*iterator);
@@ -217,4 +291,46 @@ void exploreList(IterType& iterator) {
             exploreList(iterator);
         }
     }
+}
+
+template<typename IterType>
+void getBlockFromSection(IterType& iterator, int32_t x, int32_t y, int32_t z) {
+    uint32_t listLength = (*(iterator + 1) << 24) | (*(iterator + 2) << 16) | (*(iterator + 3) << 8) | (*(iterator + 4));
+    int32_t section = y >> 4; // Y attribute we're looking for
+
+    //readSection(iterator + 5, section);
+}
+
+
+/// @brief Returns 
+/// @tparam IterType Iterator type
+/// @param iterator Chunk Iterator
+/// @param y Desired y level
+/// @return 
+template<typename IterType>
+bool readSection(IterType& iterator, IterType& dataIterator, int32_t& y) {
+
+    while(true) {
+        auto tagAndName = helpers::parseTagAndName(iterator);
+        
+        std::cout << tagAndName.name << std::endl;
+
+
+        if (tagAndName.name == "block_state") {
+
+        }
+        else if (tagAndName.name == "Y") {
+        }
+        else if (tagAndName.name == "biomes"){
+
+        }
+        else if (tagAndName.name == "BlockLight"){
+
+        }
+        else if (tagAndName.name == "SkyLight"){
+
+        }
+    }
+
+    return false;
 }

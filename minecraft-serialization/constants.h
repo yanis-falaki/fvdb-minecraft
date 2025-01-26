@@ -39,6 +39,39 @@ const uint8_t payloadLengthMap[] = {
     0,  // Int_Array
     0   // Long_Array
 };
+
+template<Tag T>
+struct TagType;
+
+template<>
+struct TagType<Tag::Byte> {
+    using Type = int8_t;
+};
+
+template<>
+struct TagType<Tag::Short> {
+    using Type = int16_t;
+};
+
+template<>
+struct TagType<Tag::Int> {
+    using Type = int32_t;
+};
+
+template<>
+struct TagType<Tag::Long> {
+    using Type = int64_t;
+};
+
+template<>
+struct TagType<Tag::Float> {
+    using Type = float;
+};
+
+template<>
+struct TagType<Tag::Double> {
+    using Type = double;
+};
   
 }
 

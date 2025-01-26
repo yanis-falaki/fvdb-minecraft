@@ -67,7 +67,10 @@
         "queue": "cpp",
         "stack": "cpp",
         "fstream": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "forward_list": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp"
     },
     "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/",
     "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/build",

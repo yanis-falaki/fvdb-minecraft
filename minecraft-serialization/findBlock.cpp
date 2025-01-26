@@ -84,9 +84,16 @@ int main()
     uint8_t* iterator = data;
 
     // skip everything until getting to sections, list of compounds
-    NBTParser::printNBTStructure(iterator);
-    //bool foundSections = NBTParser::findSectionsList(iterator);
-    //std::cout << "Found Sections: " << foundSections << std::endl;
+    //NBTParser::printNBTStructure(iterator);
+    bool foundSections = NBTParser::findSectionsList(iterator);
+    std::cout << "Found Sections: " << foundSections << std::endl;
+
+    iterator += 5;
+
+    int32_t section_y;
+    NBTParser::sectionCompoundStrategy(iterator, section_y);
+
+    std::cout << "Section y: " << section_y << std::endl;
 
     inputFile.close();
     return 0;

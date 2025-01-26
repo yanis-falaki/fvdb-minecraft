@@ -310,7 +310,7 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
     }
 }
 
-// --------------------------> Parameter Packs <--------------------------
+// --------------------------> NBT Parameter Packs <--------------------------
 struct BlockStatesPack {
     uint8_t* dataListPointer;
     uint32_t dataListLength;
@@ -325,47 +325,40 @@ struct SectionPack {
     SectionPack() = default;
 };
 
-// --------------------------> ParsingStrategies <--------------------------
+// --------------------------> BaseNBTStrategy <--------------------------
 
-struct FindSectionsListStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName) {}
+template<typename... OptionalParamPack>
+struct BaseNBTStrategy {
+    inline void preamble(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
+    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
     template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName) {}
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength) {}
+    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
+    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {}
+    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, OptionalParamPack&... optionalParamPack) {}
+    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
+        skipList(iterator);
+        return false;
+    }
+    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
+        return skipNBTStructure(iterator);
+    }
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {}
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {}
+};
 
+// --------------------------> FindSectionsListStrategy <--------------------------
+
+struct FindSectionsListStrategy : BaseNBTStrategy<> {
     inline bool handleList(uint8_t*& iterator, const auto& tagAndName) {
         if (tagAndName.name == "sections") return true;
         printList(iterator);
         return false;
     }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName) {
-        return skipNBTStructure(iterator);
-    }
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
 };
 
-struct SkipNBTStructureStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName) {}
-    template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName) {}
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName) {
-        skipList(iterator);
-        return false;
-    }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName) {
-        return skipNBTStructure(iterator);
-    }
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
-};
+// --------------------------> PrintNBTStructureStrategy <--------------------------
 
-struct PrintNBTStructureStrategy {
+struct PrintNBTStructureStrategy : BaseNBTStrategy<> {
     inline void preamble(uint8_t*& iterator, const auto& tagAndName) {
         std::cout << "Tag: " << toStr(tagAndName.tag) << "\tName: " << tagAndName.name << std::endl;
     }
@@ -403,48 +396,24 @@ struct PrintNBTStructureStrategy {
         printNBTStructure(iterator);
         return false;
     }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {}
 };
 
-struct SectionCompoundStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {}
+// --------------------------> SectionCompoundStrategy <--------------------------
+
+struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
     inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
         sectionPack.y = readNum<Tag::Byte>(iterator);
     }
-    template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
-        std::cerr << "Encountered a non Byte numeric tag" << std::endl;
-    }
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, SectionPack& sectionPack) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
-        skipList(iterator);
-        return false;
-    }
+
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
         blockStatesCompound(iterator, sectionPack.blockStates);
         return false;
     }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
 };
 
-struct BlockStatesCompoundStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {}
-    template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {}
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, BlockStatesPack& blockStatesPack) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
-        skipList(iterator);
-        return false;
-    }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
-        return skipNBTStructure(iterator);
-    }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {}
+// --------------------------> BlockCompoundStrategy <--------------------------
+
+struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
     inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {
         blockStatesPack.dataListLength = length;
         blockStatesPack.dataListPointer = iterator + 4;
@@ -462,7 +431,7 @@ inline bool findSectionsList(uint8_t*& iterator) {
 }
 
 inline bool skipNBTStructure(uint8_t*& iterator) {
-    SkipNBTStructureStrategy strategy;
+    BaseNBTStrategy strategy;
     return parseNBTStructure(iterator, strategy);
 }
 
@@ -509,7 +478,27 @@ void exploreList(uint8_t*& iterator, ListStrategy listStrategy) {
 
 // --------------------------> List Strategies <--------------------------
 
-struct PrintListStrategy {
+template<typename... Args>
+struct BaseListStrategy {
+    inline void preamble(Tag list_tag, int32_t listLength, Args&... args) {}
+
+    inline void handleCompound(uint8_t*& iterator, uint32_t listLength, Args&... args) {
+        for (int i = 0; i < listLength; ++i) skipNBTStructure(iterator);
+    }
+
+    inline void handleString(uint8_t*& iterator, uint32_t listLength, Args&... args) {
+        for (int i = 0; i < listLength; ++i) {
+            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
+            iterator += 2 + stringLength;
+        }
+    }
+
+    inline void handleList(uint8_t*& iterator, uint32_t listLength, Args&... args) {
+        for (int i = 0; i < listLength; ++i) skipList(iterator);
+    }
+};
+
+struct PrintListStrategy : BaseListStrategy<> {
     inline void preamble(Tag list_tag, int32_t listLength) {
         if (list_tag == Tag::End) {
             std::cout << "Empty List of size: " << listLength << std::endl;
@@ -539,25 +528,6 @@ struct PrintListStrategy {
     }
 };
 
-struct SkipListStrategy {
-    inline void preamble(Tag list_tag, int32_t listLength) {}
-
-    inline void handleCompound(uint8_t*& iterator, uint32_t listLength) {
-        for (int i = 0; i < listLength; ++i) skipNBTStructure(iterator);
-    }
-
-    inline void handleString(uint8_t*& iterator, uint32_t listLength) {
-        for (int i = 0; i < listLength; ++i) {
-            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
-            iterator += 2 + stringLength;
-        }
-    }
-
-    inline void handleList(uint8_t*& iterator, uint32_t listLength) {
-        for (int i = 0; i < listLength; ++i) skipList(iterator);
-    }
-};
-
 // --------------------------> List Strategy Wrappers <--------------------------
 
 inline void printList(uint8_t*& iterator) {
@@ -566,7 +536,7 @@ inline void printList(uint8_t*& iterator) {
 }
 
 inline void skipList(uint8_t*& iterator) {
-    SkipListStrategy listStrategy;
+    BaseListStrategy listStrategy;
     exploreList(iterator, listStrategy);
 }
 

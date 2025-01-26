@@ -224,81 +224,96 @@ inline typename TagType<NumT>::Type readNum(auto&& iterator) {
 
 // --------------------------> parseNBTStructure (main loop) <--------------------------
 
-template<typename Strategy, typename... ExtraArgs>
-bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, ExtraArgs&&... extraArgs) {
+template<typename Strategy, typename... OptionalParamPack>
+bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack&&... optionalParamPack) {
     while (true) {
         auto tagAndName = parseTagAndName(iterator);
-        strategy.preamble(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...); // optional printing
+        strategy.preamble(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...); // optional printing
         if (tagAndName.isEnd) return false;
 
         switch (tagAndName.tag) {
             case Tag::Byte: 
-                strategy.template handleByteTag(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.template handleByteTag(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += getPayloadLength(Tag::Byte);
                 break;
             case Tag::Short: 
-                strategy.template handleNumericTag<Tag::Short>(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.template handleNumericTag<Tag::Short>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += getPayloadLength(Tag::Short);
                 break;
             case Tag::Int: 
-                strategy.template handleNumericTag<Tag::Int>(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.template handleNumericTag<Tag::Int>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += getPayloadLength(Tag::Int);
                 break;
             case Tag::Long: 
-                strategy.template handleNumericTag<Tag::Long>(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.template handleNumericTag<Tag::Long>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += getPayloadLength(Tag::Long);
                 break;
             case Tag::Float: 
-                strategy.template handleNumericTag<Tag::Float>(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.template handleNumericTag<Tag::Float>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += getPayloadLength(Tag::Float);
                 break;
             case Tag::Double: 
-                strategy.template handleNumericTag<Tag::Double>(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.template handleNumericTag<Tag::Double>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += getPayloadLength(Tag::Double);
                 break;
 
             case Tag::Byte_Array: {
                 uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
-                strategy.handleByteArray(iterator, tagAndName, length, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.handleByteArray(iterator, tagAndName, length, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += 4 + length;
                 break;
             }
 
             case Tag::String: {
                 uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
-                strategy.handleString(iterator, tagAndName, stringLength, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.handleString(iterator, tagAndName, stringLength, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += 2 + stringLength;
                 break;
             }
 
             case Tag::List: {
-                if (strategy.handleList(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...))
+                if (strategy.handleList(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...))
                     return true;
                 break;
             }
 
             case Tag::Compound: {
-                if (strategy.handleCompound(iterator, tagAndName, std::forward<ExtraArgs>(extraArgs)...))
+                if (strategy.handleCompound(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...))
                     return true;
                 break;
             }
 
             case Tag::Int_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                strategy.handleIntArray(iterator, tagAndName, length, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.handleIntArray(iterator, tagAndName, length, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += 4 + length*4;
                 break;
             }
 
             case Tag::Long_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                strategy.handleLongArray(iterator, tagAndName, length, std::forward<ExtraArgs>(extraArgs)...);
+                strategy.handleLongArray(iterator, tagAndName, length, std::forward<OptionalParamPack>(optionalParamPack)...);
                 iterator += 4 + length*8;
                 break;
             }
         }
     }
 }
+
+// --------------------------> Parameter Packs <--------------------------
+struct BlockStatePack {
+    uint8_t* dataListPointer;
+    uint32_t dataListLength;
+
+    BlockStatePack() = default;
+};
+
+struct SectionPack {
+    BlockStatePack blockState;
+    int32_t y;
+
+    SectionPack() = default;
+};
 
 // --------------------------> ParsingStrategies <--------------------------
 
@@ -383,45 +398,48 @@ struct PrintNBTStructureStrategy {
 };
 
 struct SectionCompoundStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {
-        y = readNum<Tag::Byte>(iterator);
+    inline void preamble(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {}
+    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
+        sectionPack.y = readNum<Tag::Byte>(iterator);
     }
     template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {
+    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
         std::cerr << "Encountered a non Byte numeric tag" << std::endl;
     }
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, int32_t& y) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, int32_t& y) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {
+    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
+    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, SectionPack& sectionPack) {}
+    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
         skipList(iterator);
         return false;
     }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, int32_t& y) {
+    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
         return skipNBTStructure(iterator);
     }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, int32_t& y) {}
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, int32_t& y) {}
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, SectionPack& sectionPack) {}
 };
 
 struct BlockStatesCompoundStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {}
+    inline void preamble(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {}
+    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {}
     template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {
+    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {
         std::cerr << "Encountered a non Byte numeric tag" << std::endl;
     }
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, uint8_t*& dataListPointer) {}
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, uint8_t*& dataListPointer) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {
+    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatePack& blockStatePack) {}
+    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, BlockStatePack& blockStatePack) {}
+    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {
         skipList(iterator);
         return false;
     }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, uint8_t*& dataListPointer) {
+    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, BlockStatePack& blockStatePack) {
         return skipNBTStructure(iterator);
     }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, uint8_t*& dataListPointer) {}
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, uint8_t*& dataListPointer) {}
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatePack& blockStatePack) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatePack& blockStatePack) {
+        blockStatePack.dataListLength = length;
+        blockStatePack.dataListPointer = iterator + 4;
+    }
 };
 
 
@@ -444,14 +462,14 @@ inline void printNBTStructure(uint8_t*& iterator) {
     parseNBTStructure(iterator, strategy);
 }
 
-inline void sectionCompoundStrategy(uint8_t*& iterator, int32_t& y) {
+inline void sectionCompoundStrategy(uint8_t*& iterator, SectionPack& sectionPack) {
     SectionCompoundStrategy strategy;
-    parseNBTStructure(iterator, strategy, y);
+    parseNBTStructure(iterator, strategy, sectionPack);
 }
 
-inline void blockStatesCompoundStrategy(uint8_t*& iterator, uint8_t*& dataListPointer) {
+inline void blockStatesCompoundStrategy(uint8_t*& iterator, BlockStatePack& blockStatePack) {
     BlockStatesCompoundStrategy strategy;
-    parseNBTStructure(iterator, strategy, dataListPointer);
+    parseNBTStructure(iterator, strategy, blockStatePack);
 }
 
 // --------------------------> exploreList <--------------------------

@@ -90,10 +90,10 @@ int main()
 
     iterator += 5;
 
-    int32_t section_y;
-    NBTParser::sectionCompoundStrategy(iterator, section_y);
+    NBTParser::SectionPack sectionPack;
+    NBTParser::sectionCompoundStrategy(iterator, sectionPack);
 
-    std::cout << "Section y: " << section_y << std::endl;
+    std::cout << "Section y: " << sectionPack.y << std::endl;
 
     inputFile.close();
     return 0;

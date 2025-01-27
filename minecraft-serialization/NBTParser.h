@@ -269,7 +269,7 @@ struct PaletteListPack {
 struct BlockStatesPack {
     uint64_t* dataList;
     uint32_t dataListLength;
-    PaletteListPack blockPalletePack;
+    PaletteListPack palleteList;
     BlockStatesPack() = default;
 };
 
@@ -482,7 +482,7 @@ struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
     }
 
     inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
-        sectionPalleteList(iterator, blockStatesPack.blockPalletePack);
+        sectionPalleteList(iterator, blockStatesPack.palleteList);
         return false;
     }
 };

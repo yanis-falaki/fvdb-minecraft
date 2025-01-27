@@ -113,7 +113,7 @@ int main()
     std::cout << "Data Index: " << dataIndex << std::endl;
 
     // calculate min number of bits to represent palette index
-    uint32_t num_bits = helpers::bitLength(sectionList[section_index].blockStates.blockPalletePack.size());
+    uint32_t num_bits = helpers::bitLength(sectionList[section_index].blockStates.palleteList.size());
     if (num_bits < 4) num_bits = 4;
 
     // make bitmask
@@ -130,7 +130,7 @@ int main()
             uint32_t globalIndex = i * indexes_per_element + j;
             if (globalIndex == dataIndex) {
                 uint32_t paletteIndex = (uint32_t)(word & bitmask);
-                std::cout << "Block: " << sectionList[section_index].blockStates.blockPalletePack[paletteIndex].name << std::endl;
+                std::cout << "Block: " << sectionList[section_index].blockStates.palleteList[paletteIndex].name << std::endl;
             }
             word = word >> num_bits;
         }

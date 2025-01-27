@@ -88,13 +88,11 @@ int main()
     bool foundSections = NBTParser::findSectionsList(iterator);
     std::cout << "Found Sections: " << foundSections << std::endl;
 
-    iterator += 5;
+    NBTParser::SectionListPack sectionList;
+    NBTParser::sectionsList(iterator, sectionList);
 
-    NBTParser::SectionPack sectionPack;
-    NBTParser::sectionCompound(iterator, sectionPack);
-
-    std::cout << "Section y: " << sectionPack.y << "\tData Length: " << sectionPack.blockStates.dataListLength
-              << "\tFirst Block Name: " << sectionPack.blockStates.blockPalletePack.Palette[0].name << std::endl;
+    std::cout << "Section y: " << sectionList[0].y << "\tData Length: " << sectionList[0].blockStates.dataListLength
+              << "\tFirst Block Name: " << sectionList[0].blockStates.blockPalletePack.palette[0].name << std::endl;
 
     inputFile.close();
     return 0;

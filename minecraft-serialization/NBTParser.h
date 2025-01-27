@@ -234,6 +234,72 @@ inline typename TagType<NumT>::Type readNum(auto&& iterator) {
    }
 }
 
+// --------------------------> Parameter Packs <--------------------------
+
+struct PalettePack {
+    std::string name;
+    PalettePack() = default;
+};
+
+struct PaletteListPack {
+    std::vector<PalettePack> palette;
+    
+    PalettePack& operator[](size_t index) {
+        return palette[index];
+    }
+    const PalettePack& operator[](size_t index) const {
+        return palette[index];
+    }
+    PalettePack* operator+(size_t offset) {
+        return palette.data() + offset;
+    }
+    const PalettePack* operator+(size_t offset) const {
+        return palette.data() + offset;
+    }
+    PalettePack* begin() { return palette.data(); }
+    PalettePack* end() { return palette.data() + palette.size(); }
+    const PalettePack* begin() const { return palette.data(); }
+    const PalettePack* end() const { return palette.data() + palette.size(); }
+
+    PaletteListPack() = default;
+};
+
+struct BlockStatesPack {
+    uint8_t* dataListPointer;
+    uint32_t dataListLength;
+    PaletteListPack blockPalletePack;
+    BlockStatesPack() = default;
+};
+
+struct SectionPack {
+    BlockStatesPack blockStates;
+    int32_t y;
+    SectionPack() = default;
+};
+
+struct SectionListPack {
+    std::vector<SectionPack> sections;
+    
+    SectionPack& operator[](size_t index) {
+        return sections[index];
+    }
+    const SectionPack& operator[](size_t index) const {
+        return sections[index];
+    }
+    SectionPack* operator+(size_t offset) {
+        return sections.data() + offset;
+    }
+    const SectionPack* operator+(size_t offset) const {
+        return sections.data() + offset;
+    }
+    SectionPack* begin() { return sections.data(); }
+    SectionPack* end() { return sections.data() + sections.size(); }
+    const SectionPack* begin() const { return sections.data(); }
+    const SectionPack* end() const { return sections.data() + sections.size(); }
+
+    SectionListPack() = default;
+};
+
 // --------------------------> parseNBTStructure (main loop) <--------------------------
 
 template<typename Strategy, typename... OptionalParamPack>
@@ -311,30 +377,6 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
         }
     }
 }
-
-// --------------------------> Parameter Packs <--------------------------
-struct PalettePack {
-    std::string name;
-    PalettePack() = default;
-};
-
-struct PaletteListPack {
-    std::vector<PalettePack> Palette;
-    PaletteListPack() = default;
-};
-
-struct BlockStatesPack {
-    uint8_t* dataListPointer;
-    uint32_t dataListLength;
-    PaletteListPack blockPalletePack;
-    BlockStatesPack() = default;
-};
-
-struct SectionPack {
-    BlockStatesPack blockStates;
-    int32_t y;
-    SectionPack() = default;
-};
 
 // --------------------------> BaseNBTStrategy <--------------------------
 
@@ -559,9 +601,17 @@ struct PrintListStrategy : BaseListStrategy<> {
 
 struct SectionPaletteStrategy : BaseListStrategy<PaletteListPack> {
     inline void handleCompound(uint8_t*& iterator, uint32_t listLength, PaletteListPack& blockPalletePack) {
-        blockPalletePack.Palette.resize(listLength);
+        blockPalletePack.palette.resize(listLength);
         for (int i = 0; i < listLength; ++i)
-            paletteCompound(iterator, blockPalletePack.Palette[i]);
+            paletteCompound(iterator, blockPalletePack.palette[i]);
+    }
+};
+
+struct SectionListStrategy : BaseListStrategy<SectionListPack> {
+    inline void handleCompound(uint8_t*& iterator, uint32_t listLength, SectionListPack& sectionListPack) {
+        sectionListPack.sections.resize(listLength);
+        for (int i = 0; i < listLength; ++i)
+            sectionCompound(iterator, sectionListPack.sections[i]);
     }
 };
 
@@ -580,6 +630,11 @@ inline void skipList(uint8_t*& iterator) {
 inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalettePack) {
     SectionPaletteStrategy listStrategy;
     exploreList(iterator, listStrategy, blockPalettePack);
+}
+
+inline void sectionsList(uint8_t*& iterator, SectionListPack& sectionsList) {
+    SectionListStrategy listStrategy;
+    exploreList(iterator, listStrategy, sectionsList);
 }
 
 

@@ -261,11 +261,13 @@ struct PaletteListPack {
     const PalettePack* begin() const { return palette.data(); }
     const PalettePack* end() const { return palette.data() + palette.size(); }
 
+    size_t size() const { return palette.size(); }
+
     PaletteListPack() = default;
 };
 
 struct BlockStatesPack {
-    uint8_t* dataListPointer;
+    uint64_t* dataList;
     uint32_t dataListLength;
     PaletteListPack blockPalletePack;
     BlockStatesPack() = default;
@@ -296,6 +298,8 @@ struct SectionListPack {
     SectionPack* end() { return sections.data() + sections.size(); }
     const SectionPack* begin() const { return sections.data(); }
     const SectionPack* end() const { return sections.data() + sections.size(); }
+
+    size_t size() const { return sections.size(); }
 
     SectionListPack() = default;
 };
@@ -468,8 +472,13 @@ struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
 
 struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
     inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {
+        uint8_t* tmp = iterator + 4;
+        blockStatesPack.dataList = new uint64_t[length];
+        for (int i = 0; i < length; ++i) {
+            blockStatesPack.dataList[i] = readNum<Tag::Long>(tmp);
+            tmp += 4;
+        }
         blockStatesPack.dataListLength = length;
-        blockStatesPack.dataListPointer = iterator + 4;
     }
 
     inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {

@@ -7,15 +7,18 @@
 #include <cstring>
 #include <NBTParser.h>
 
+int bit_length(int n);
+
 int main()
 {
-    int32_t x = 5;
-    int32_t y = 122;
-    int32_t z = -8;
+    int32_t x = 6;
+    int32_t y = 119;
+    int32_t z = -7;
 
     // Chunk to look for
     int chunkX = x >> 4;
     int chunkZ = z >> 4;
+    int chunkY = y >> 4; // desired section_y
 
     std::cout << "chunkX: " << chunkX << "\tchunkZ: " << chunkZ << std::endl;
 
@@ -91,9 +94,61 @@ int main()
     NBTParser::SectionListPack sectionList;
     NBTParser::sectionsList(iterator, sectionList);
 
-    std::cout << "Section y: " << sectionList[0].y << "\tData Length: " << sectionList[0].blockStates.dataListLength
-              << "\tFirst Block Name: " << sectionList[0].blockStates.blockPalletePack.palette[0].name << std::endl;
+    uint32_t section_index;
+    for (uint32_t i = 0; i < sectionList.size(); ++i) {
+        if (sectionList[i].y == chunkY){
+            section_index = i;
+            break;
+        }
+    }
+    std::cout << "Section Index: " << section_index << std::endl;
 
+    // get coords relative to section/chunk
+    uint32_t localX = x & 15;
+    uint32_t localY = y & 15;
+    uint32_t localZ = z & 15;
+
+    // calculate index within data array of section
+    uint32_t dataIndex = localY * 256 + localZ*16 + localX;
+    std::cout << "Data Index: " << dataIndex << std::endl;
+
+    // calculate min number of bits to represent palette index
+    uint32_t num_bits = bit_length(sectionList[section_index].blockStates.blockPalletePack.size());
+    if (num_bits < 4) num_bits = 4;
+
+    // make bitmask
+    uint64_t bitmask = ((1ULL << num_bits) - 1);
+
+    uint32_t indexes_per_element = 64 / num_bits;
+    uint32_t last_state_elements = 4096 % indexes_per_element;
+    if (last_state_elements == 0) last_state_elements = indexes_per_element;
+
+    for (int i = 0; i < sectionList[section_index].blockStates.dataListLength; ++i) {
+        uint64_t word = sectionList[section_index].blockStates.dataList[i];
+
+        for (int j = 0; j < indexes_per_element; ++j) {
+            uint32_t globalIndex = i * indexes_per_element + j;
+            if (globalIndex == dataIndex) {
+                std::cout << "Palette Index: " << (uint32_t)(word & bitmask) << std::endl;
+            }
+            word = word >> num_bits;
+        }
+    }
+    
     inputFile.close();
     return 0;
+}
+
+int bit_length(int n) {
+    if (n == 0) return 0;
+    
+    // Convert to unsigned to deal with negative numbers in two's complement
+    unsigned int un = n < 0 ? ~n + 1 : n;  // Two's complement for negative numbers
+    
+    int bits = 0;
+    while (un) {
+        un >>= 1; // Right shift by one bit
+        bits++;
+    }
+    return bits;
 }

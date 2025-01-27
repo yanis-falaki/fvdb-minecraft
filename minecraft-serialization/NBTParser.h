@@ -23,6 +23,7 @@ namespace NBTParser {
 
 struct BlockStatesPack;
 struct SectionPack;
+struct PaletteListPack;
 
 // --------------------------> Compound Strategy Forward Declarations <--------------------------
 
@@ -35,6 +36,7 @@ inline void blockStatesCompound(uint8_t*& iterator, BlockStatesPack& blockStates
 
 inline void printList(uint8_t*& iterator);
 inline void skipList(uint8_t*& iterator);
+inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalettePack);
 
 // --------------------------> Tags enum <--------------------------
 
@@ -235,74 +237,74 @@ inline typename TagType<NumT>::Type readNum(auto&& iterator) {
 // --------------------------> parseNBTStructure (main loop) <--------------------------
 
 template<typename Strategy, typename... OptionalParamPack>
-bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack&&... optionalParamPack) {
+bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack&... optionalParamPack) {
     while (true) {
         auto tagAndName = parseTagAndName(iterator);
-        strategy.preamble(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...); // optional printing
+        strategy.preamble(iterator, tagAndName, optionalParamPack...); // optional printing
         if (tagAndName.isEnd) return false;
 
         switch (tagAndName.tag) {
             case Tag::Byte: 
-                strategy.template handleByteTag(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.template handleByteTag(iterator, tagAndName, optionalParamPack...);
                 iterator += getPayloadLength(Tag::Byte);
                 break;
             case Tag::Short: 
-                strategy.template handleNumericTag<Tag::Short>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.template handleNumericTag<Tag::Short>(iterator, tagAndName, optionalParamPack...);
                 iterator += getPayloadLength(Tag::Short);
                 break;
             case Tag::Int: 
-                strategy.template handleNumericTag<Tag::Int>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.template handleNumericTag<Tag::Int>(iterator, tagAndName, optionalParamPack...);
                 iterator += getPayloadLength(Tag::Int);
                 break;
             case Tag::Long: 
-                strategy.template handleNumericTag<Tag::Long>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.template handleNumericTag<Tag::Long>(iterator, tagAndName, optionalParamPack...);
                 iterator += getPayloadLength(Tag::Long);
                 break;
             case Tag::Float: 
-                strategy.template handleNumericTag<Tag::Float>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.template handleNumericTag<Tag::Float>(iterator, tagAndName, optionalParamPack...);
                 iterator += getPayloadLength(Tag::Float);
                 break;
             case Tag::Double: 
-                strategy.template handleNumericTag<Tag::Double>(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.template handleNumericTag<Tag::Double>(iterator, tagAndName, optionalParamPack...);
                 iterator += getPayloadLength(Tag::Double);
                 break;
 
             case Tag::Byte_Array: {
                 uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
-                strategy.handleByteArray(iterator, tagAndName, length, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.handleByteArray(iterator, tagAndName, length, optionalParamPack...);
                 iterator += 4 + length;
                 break;
             }
 
             case Tag::String: {
                 uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
-                strategy.handleString(iterator, tagAndName, stringLength, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.handleString(iterator, tagAndName, stringLength, optionalParamPack...);
                 iterator += 2 + stringLength;
                 break;
             }
 
             case Tag::List: {
-                if (strategy.handleList(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...))
+                if (strategy.handleList(iterator, tagAndName, optionalParamPack...))
                     return true;
                 break;
             }
 
             case Tag::Compound: {
-                if (strategy.handleCompound(iterator, tagAndName, std::forward<OptionalParamPack>(optionalParamPack)...))
+                if (strategy.handleCompound(iterator, tagAndName, optionalParamPack...))
                     return true;
                 break;
             }
 
             case Tag::Int_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                strategy.handleIntArray(iterator, tagAndName, length, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.handleIntArray(iterator, tagAndName, length, optionalParamPack...);
                 iterator += 4 + length*4;
                 break;
             }
 
             case Tag::Long_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                strategy.handleLongArray(iterator, tagAndName, length, std::forward<OptionalParamPack>(optionalParamPack)...);
+                strategy.handleLongArray(iterator, tagAndName, length, optionalParamPack...);
                 iterator += 4 + length*8;
                 break;
             }
@@ -310,18 +312,27 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
     }
 }
 
-// --------------------------> NBT Parameter Packs <--------------------------
+// --------------------------> Parameter Packs <--------------------------
+struct PalettePack {
+    std::string name;
+    PalettePack() = default;
+};
+
+struct PaletteListPack {
+    std::vector<PalettePack> Palette;
+    PaletteListPack() = default;
+};
+
 struct BlockStatesPack {
     uint8_t* dataListPointer;
     uint32_t dataListLength;
-
+    PaletteListPack blockPalletePack;
     BlockStatesPack() = default;
 };
 
 struct SectionPack {
     BlockStatesPack blockStates;
     int32_t y;
-
     SectionPack() = default;
 };
 
@@ -411,12 +422,25 @@ struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
     }
 };
 
-// --------------------------> BlockCompoundStrategy <--------------------------
+// --------------------------> BlockStatesCompoundStrategy <--------------------------
 
 struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
     inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {
         blockStatesPack.dataListLength = length;
         blockStatesPack.dataListPointer = iterator + 4;
+    }
+
+    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
+        sectionPalleteList(iterator, blockStatesPack.blockPalletePack);
+        return false;
+    }
+};
+
+// --------------------------> PaletteCompoundStrategy <--------------------------
+
+struct PalleteCompoundStrategy : BaseNBTStrategy<PalettePack> {
+    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, PalettePack& palettePack) {
+        palettePack.name.assign(reinterpret_cast<char*>(iterator+2), stringLength);
     }
 };
 
@@ -450,29 +474,34 @@ inline void blockStatesCompound(uint8_t*& iterator, BlockStatesPack& blockStates
     parseNBTStructure(iterator, strategy, blockStatesPack);
 }
 
+inline void paletteCompound(uint8_t*& iterator, PalettePack& palettePack) {
+    PalleteCompoundStrategy strategy;
+    parseNBTStructure(iterator, strategy, palettePack);
+}
+
 // --------------------------> exploreList <--------------------------
 
-template<typename ListStrategy>
-void exploreList(uint8_t*& iterator, ListStrategy listStrategy) {
+template<typename ListStrategy, typename... OptionalParamPack>
+void exploreList(uint8_t*& iterator, ListStrategy listStrategy, OptionalParamPack&... optionalParamPack) {
     uint8_t payloadTagLength =  getPayloadLength(*iterator);
     Tag list_tag = static_cast<Tag>(*iterator);
     int32_t listLength = readNum<Tag::Int>(iterator+1);
 
     iterator += 5 + (payloadTagLength * listLength);
 
-    listStrategy.preamble(list_tag, listLength);
+    listStrategy.preamble(list_tag, listLength, optionalParamPack...);
 
     if (list_tag == Tag::End) return;
 
     // If atypical list_tag, then the iterator will have only jumped 5 units as payloadTagLength will be zero
     if (list_tag == Tag::Compound) {
-        listStrategy.handleCompound(iterator, listLength);
+        listStrategy.handleCompound(iterator, listLength, optionalParamPack...);
     }
     else if (list_tag == Tag::String) {
-        listStrategy.handleString(iterator, listLength);
+        listStrategy.handleString(iterator, listLength, optionalParamPack...);
     }
     else if (list_tag == Tag::List) {
-        listStrategy.handleList(iterator, listLength);
+        listStrategy.handleList(iterator, listLength, optionalParamPack...);
     }
 }
 
@@ -528,6 +557,14 @@ struct PrintListStrategy : BaseListStrategy<> {
     }
 };
 
+struct SectionPaletteStrategy : BaseListStrategy<PaletteListPack> {
+    inline void handleCompound(uint8_t*& iterator, uint32_t listLength, PaletteListPack& blockPalletePack) {
+        blockPalletePack.Palette.resize(listLength);
+        for (int i = 0; i < listLength; ++i)
+            paletteCompound(iterator, blockPalletePack.Palette[i]);
+    }
+};
+
 // --------------------------> List Strategy Wrappers <--------------------------
 
 inline void printList(uint8_t*& iterator) {
@@ -538,6 +575,11 @@ inline void printList(uint8_t*& iterator) {
 inline void skipList(uint8_t*& iterator) {
     BaseListStrategy listStrategy;
     exploreList(iterator, listStrategy);
+}
+
+inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalettePack) {
+    SectionPaletteStrategy listStrategy;
+    exploreList(iterator, listStrategy, blockPalettePack);
 }
 
 

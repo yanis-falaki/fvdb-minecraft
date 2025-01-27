@@ -93,7 +93,8 @@ int main()
     NBTParser::SectionPack sectionPack;
     NBTParser::sectionCompound(iterator, sectionPack);
 
-    std::cout << "Section y: " << sectionPack.y << "\tData Length: " << sectionPack.blockStates.dataListLength << std::endl;
+    std::cout << "Section y: " << sectionPack.y << "\tData Length: " << sectionPack.blockStates.dataListLength
+              << "\tFirst Block Name: " << sectionPack.blockStates.blockPalletePack.Palette[0].name << std::endl;
 
     inputFile.close();
     return 0;

@@ -113,15 +113,15 @@ int main()
     std::cout << "Data Index: " << dataIndex << std::endl;
 
     // calculate min number of bits to represent palette index
-    uint32_t num_bits = bit_length(sectionList[section_index].blockStates.blockPalletePack.size());
+    uint32_t num_bits = helpers::bitLength(sectionList[section_index].blockStates.blockPalletePack.size());
     if (num_bits < 4) num_bits = 4;
 
     // make bitmask
     uint64_t bitmask = ((1ULL << num_bits) - 1);
 
     uint32_t indexes_per_element = 64 / num_bits;
-    uint32_t last_state_elements = 4096 % indexes_per_element;
-    if (last_state_elements == 0) last_state_elements = indexes_per_element;
+    //uint32_t last_state_elements = 4096 % indexes_per_element;
+    //if (last_state_elements == 0) last_state_elements = indexes_per_element;
 
     for (int i = 0; i < sectionList[section_index].blockStates.dataListLength; ++i) {
         uint64_t word = sectionList[section_index].blockStates.dataList[i];
@@ -140,16 +140,3 @@ int main()
     return 0;
 }
 
-int bit_length(int n) {
-    if (n == 0) return 0;
-    
-    // Convert to unsigned to deal with negative numbers in two's complement
-    unsigned int un = n < 0 ? ~n + 1 : n;  // Two's complement for negative numbers
-    
-    int bits = 0;
-    while (un) {
-        un >>= 1; // Right shift by one bit
-        bits++;
-    }
-    return bits;
-}

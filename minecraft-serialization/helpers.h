@@ -148,6 +148,12 @@ inline void strcpy(IteratorType iterator, char* dest, uint8_t n) {
     }
 }
 
+// --------------------------> bit_length <--------------------------
+
+uint32_t bitLength(uint32_t n) {
+    return 32 -__builtin_clz(n);
+}
+
 } // namespace helpers
 
 #endif // ifndef HELPERS

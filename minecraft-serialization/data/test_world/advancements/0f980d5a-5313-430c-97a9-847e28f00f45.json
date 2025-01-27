@@ -7,7 +7,9 @@
   },
   "minecraft:adventure/adventuring_time": {
     "criteria": {
-      "minecraft:forest": "2025-01-23 16:52:01 -0500"
+      "minecraft:forest": "2025-01-23 16:52:01 -0500",
+      "minecraft:meadow": "2025-01-27 11:28:10 -0500",
+      "minecraft:birch_forest": "2025-01-27 12:52:49 -0500"
     },
     "done": false
   },

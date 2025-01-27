@@ -11,9 +11,9 @@ int bit_length(int n);
 
 int main()
 {
-    int32_t x = 6;
-    int32_t y = 119;
-    int32_t z = -7;
+    int32_t x = -41;
+    int32_t y = 104;
+    int32_t z = 62;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -82,7 +82,7 @@ int main()
     uint32_t uncompressedSize;
     uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
 
-    //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+    helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
 
     uint8_t* iterator = data;
 
@@ -129,7 +129,8 @@ int main()
         for (int j = 0; j < indexes_per_element; ++j) {
             uint32_t globalIndex = i * indexes_per_element + j;
             if (globalIndex == dataIndex) {
-                std::cout << "Palette Index: " << (uint32_t)(word & bitmask) << std::endl;
+                uint32_t paletteIndex = (uint32_t)(word & bitmask);
+                std::cout << "Block: " << sectionList[section_index].blockStates.blockPalletePack[paletteIndex].name << std::endl;
             }
             word = word >> num_bits;
         }

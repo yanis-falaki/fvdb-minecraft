@@ -408,7 +408,7 @@ struct BaseNBTStrategy {
 struct FindSectionsListStrategy : BaseNBTStrategy<> {
     inline bool handleList(uint8_t*& iterator, const auto& tagAndName) {
         if (tagAndName.name == "sections") return true;
-        printList(iterator);
+        skipList(iterator);
         return false;
     }
 };
@@ -476,7 +476,7 @@ struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
         blockStatesPack.dataList = new uint64_t[length];
         for (int i = 0; i < length; ++i) {
             blockStatesPack.dataList[i] = readNum<Tag::Long>(tmp);
-            tmp += 4;
+            tmp += 8;
         }
         blockStatesPack.dataListLength = length;
     }

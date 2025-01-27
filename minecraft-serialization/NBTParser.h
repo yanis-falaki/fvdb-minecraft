@@ -342,7 +342,6 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
             case Tag::Byte_Array: {
                 uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
                 strategy.handleByteArray(iterator, tagAndName, length, optionalParamPack...);
-                iterator += 4 + length;
                 break;
             }
 
@@ -368,14 +367,12 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
             case Tag::Int_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
                 strategy.handleIntArray(iterator, tagAndName, length, optionalParamPack...);
-                iterator += 4 + length*4;
                 break;
             }
 
             case Tag::Long_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
                 strategy.handleLongArray(iterator, tagAndName, length, optionalParamPack...);
-                iterator += 4 + length*8;
                 break;
             }
         }
@@ -390,7 +387,9 @@ struct BaseNBTStrategy {
     inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
     template<Tag NumTag>
     inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {}
+    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {
+        iterator += 4 + length;
+    }
     inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, OptionalParamPack&... optionalParamPack) {}
     inline bool handleList(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
         skipList(iterator);
@@ -399,8 +398,12 @@ struct BaseNBTStrategy {
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
         return skipNBTStructure(iterator);
     }
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {}
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {}
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {
+        iterator += 4 + length*8;
+    }
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {
+        iterator += 4 + length*4;
+    }
 };
 
 // --------------------------> FindSectionsListStrategy <--------------------------
@@ -432,8 +435,10 @@ struct PrintNBTStructureStrategy : BaseNBTStrategy<> {
     }
 
     inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {
+        iterator += 4;
         for (int i = 0; i < length; ++i) {
-            std::cout << (short)(*(iterator + 4 + i));
+            std::cout << (short)(*(iterator));
+            iterator += 1;
         }
         std::cout << std::endl;
     }
@@ -472,11 +477,11 @@ struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
 
 struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
     inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {
-        uint8_t* tmp = iterator + 4;
+        iterator += 4;
         blockStatesPack.dataList = new uint64_t[length];
         for (int i = 0; i < length; ++i) {
-            blockStatesPack.dataList[i] = readNum<Tag::Long>(tmp);
-            tmp += 8;
+            blockStatesPack.dataList[i] = readNum<Tag::Long>(iterator);
+            iterator += 8;
         }
         blockStatesPack.dataListLength = length;
     }

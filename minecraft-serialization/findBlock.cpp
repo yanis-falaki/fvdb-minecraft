@@ -11,9 +11,9 @@ int bit_length(int n);
 
 int main()
 {
-    int32_t x = 103;
-    int32_t y = 62;
-    int32_t z = -27;
+    int32_t x = 287;
+    int32_t y = 83;
+    int32_t z = -140;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -124,7 +124,7 @@ int main()
             uint32_t paletteIndex = (uint32_t)(word & bitmask);
             
             uint32_t localX, localY, localZ;
-            helpers::globalIndexToLocalCoords(globalIndex, localX, localY, localZ);
+            helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
             i_coords[globalIndex] = localX;
             j_coords[globalIndex] = localY;
@@ -143,7 +143,7 @@ int main()
         uint32_t paletteIndex = (uint32_t)(finalWord & bitmask);
         
         uint32_t localX, localY, localZ;
-        helpers::globalIndexToLocalCoords(globalIndex, localX, localY, localZ);
+        helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
         i_coords[globalIndex] = localX;
         j_coords[globalIndex] = localY;
@@ -153,14 +153,7 @@ int main()
         finalWord = finalWord >> num_bits;
     }
 
-
-    // get coords relative to section/chunk
-    uint32_t localX = x & 15;
-    uint32_t localY = y & 15;
-    uint32_t localZ = z & 15;
-
-    // calculate index within data array of section
-    uint32_t dataIndex = localY * 256 + localZ*16 + localX;
+    uint32_t dataIndex = helpers::globalCoordsToSectionDataIndex(x, y, z);
 
     std::cout << "Block: " << sectionList[section_index].blockStates.palleteList[palette_index[dataIndex]].name << std::endl;
 

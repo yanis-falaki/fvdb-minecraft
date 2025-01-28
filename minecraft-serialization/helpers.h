@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace helpers 
+namespace NBTParser::helpers 
 {
 
 // --------------------------> Object Dump (used for debugging) <--------------------------

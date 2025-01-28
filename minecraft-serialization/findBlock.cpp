@@ -11,9 +11,9 @@ int bit_length(int n);
 
 int main()
 {
-    int32_t x = 287;
-    int32_t y = 83;
-    int32_t z = -140;
+    int32_t x = 182;
+    int32_t y = 60;
+    int32_t z = -14;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -80,7 +80,7 @@ int main()
     inputFile.read(reinterpret_cast<char*>(compressed), size);
 
     uint32_t uncompressedSize;
-    uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
+    uint8_t* data = NBTParser::helpers::uncompress_chunk(compressed, size, uncompressedSize);
 
     delete[] compressed;
 
@@ -98,7 +98,7 @@ int main()
 
 
     // calculate min number of bits to represent palette index
-    uint32_t num_bits = helpers::bitLength(sectionList[section_index].blockStates.palleteList.size());
+    uint32_t num_bits = NBTParser::helpers::bitLength(sectionList[section_index].blockStates.palleteList.size());
     if (num_bits < 4) num_bits = 4;
 
     // make bitmask
@@ -124,10 +124,10 @@ int main()
             uint32_t paletteIndex = (uint32_t)(word & bitmask);
             
             uint32_t localX, localY, localZ;
-            helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
+            NBTParser::helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
             i_coords[globalIndex] = localX;
-            j_coords[globalIndex] = localY;
+            j_coords[globalIndex] = localY+ sectionList[section_index].y;
             k_coords[globalIndex] = localZ;
             palette_index[globalIndex] = paletteIndex;
             
@@ -143,17 +143,17 @@ int main()
         uint32_t paletteIndex = (uint32_t)(finalWord & bitmask);
         
         uint32_t localX, localY, localZ;
-        helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
+        NBTParser::helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
         i_coords[globalIndex] = localX;
-        j_coords[globalIndex] = localY;
+        j_coords[globalIndex] = localY + sectionList[section_index].y;
         k_coords[globalIndex] = localZ;
         palette_index[globalIndex] = paletteIndex;
         
         finalWord = finalWord >> num_bits;
     }
 
-    uint32_t dataIndex = helpers::globalCoordsToSectionDataIndex(x, y, z);
+    uint32_t dataIndex = NBTParser::helpers::globalCoordsToSectionDataIndex(x, y, z);
 
     std::cout << "Block: " << sectionList[section_index].blockStates.palleteList[palette_index[dataIndex]].name << std::endl;
 

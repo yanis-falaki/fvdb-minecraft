@@ -11,9 +11,9 @@ int bit_length(int n);
 
 int main()
 {
-    int32_t x = -41;
-    int32_t y = 104;
-    int32_t z = 62;
+    int32_t x = 103;
+    int32_t y = 62;
+    int32_t z = -27;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -76,11 +76,13 @@ int main()
     uint32_t size = ((chunk_header[0] << 24) | (chunk_header[1] << 16) | (chunk_header[2] << 8) | chunk_header[3]) - 1;
 
     // Collect data
-    uint8_t compressed[size];
+    uint8_t* compressed = new uint8_t[size];
     inputFile.read(reinterpret_cast<char*>(compressed), size);
 
     uint32_t uncompressedSize;
     uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
+
+    delete[] compressed;
 
     helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
 
@@ -136,6 +138,7 @@ int main()
         }
     }
     
+    delete[] data;
     inputFile.close();
     return 0;
 }

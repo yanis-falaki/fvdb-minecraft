@@ -365,7 +365,7 @@ bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack
             }
 
             case Tag::Int_Array: {
-                int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
+                int32_t length = readNum<Tag::Int>(iterator);
                 strategy.handleIntArray(iterator, tagAndName, length, optionalParamPack...);
                 break;
             }
@@ -398,10 +398,10 @@ struct BaseNBTStrategy {
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
         return skipNBTStructure(iterator);
     }
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, int32_t length, OptionalParamPack&... optionalParamPack) {
         iterator += 4 + length*8;
     }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {
+    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, int32_t length, OptionalParamPack&... optionalParamPack) {
         iterator += 4 + length*4;
     }
 };
@@ -468,7 +468,8 @@ struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
     }
 
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
-        blockStatesCompound(iterator, sectionPack.blockStates);
+        if (tagAndName.name == "block_states") blockStatesCompound(iterator, sectionPack.blockStates);
+        else skipNBTStructure(iterator); 
         return false;
     }
 };
@@ -476,7 +477,7 @@ struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
 // --------------------------> BlockStatesCompoundStrategy <--------------------------
 
 struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, BlockStatesPack& blockStatesPack) {
+    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, int32_t length, BlockStatesPack& blockStatesPack) {
         iterator += 4;
         blockStatesPack.dataList = new uint64_t[length];
         for (int i = 0; i < length; ++i) {

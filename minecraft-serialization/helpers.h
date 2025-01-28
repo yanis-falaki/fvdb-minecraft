@@ -115,7 +115,7 @@ std::vector<uint8_t> uncompress_chunk(const uint8_t* compressed_data, uLong comp
 }
 
 uint8_t* uncompress_chunk(const uint8_t* compressed_data, uLong compressed_size, uint32_t& uncompressed_size) {
-    uLong dest_len = compressed_size * 10;
+    uLong dest_len = compressed_size * 2;
     uint8_t* destination = new uint8_t[dest_len];
     
     while (true) {

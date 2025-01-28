@@ -84,17 +84,9 @@ int main()
 
     delete[] compressed;
 
-    helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+    //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
 
-    uint8_t* iterator = data;
-
-    // skip everything until getting to sections, list of compounds
-    //NBTParser::printNBTStructure(iterator);
-    bool foundSections = NBTParser::findSectionsList(iterator);
-    std::cout << "Found Sections: " << foundSections << std::endl;
-
-    NBTParser::SectionListPack sectionList;
-    NBTParser::sectionsList(iterator, sectionList);
+    NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data);
 
     uint32_t section_index;
     for (uint32_t i = 0; i < sectionList.size(); ++i) {
@@ -103,16 +95,7 @@ int main()
             break;
         }
     }
-    std::cout << "Section Index: " << section_index << std::endl;
 
-    // get coords relative to section/chunk
-    uint32_t localX = x & 15;
-    uint32_t localY = y & 15;
-    uint32_t localZ = z & 15;
-
-    // calculate index within data array of section
-    uint32_t dataIndex = localY * 256 + localZ*16 + localX;
-    std::cout << "Data Index: " << dataIndex << std::endl;
 
     // calculate min number of bits to represent palette index
     uint32_t num_bits = helpers::bitLength(sectionList[section_index].blockStates.palleteList.size());
@@ -122,21 +105,65 @@ int main()
     uint64_t bitmask = ((1ULL << num_bits) - 1);
 
     uint32_t indexes_per_element = 64 / num_bits;
-    //uint32_t last_state_elements = 4096 % indexes_per_element;
-    //if (last_state_elements == 0) last_state_elements = indexes_per_element;
+    uint32_t last_state_elements = 4096 % indexes_per_element;
+    if (last_state_elements == 0) last_state_elements = indexes_per_element;
 
-    for (int i = 0; i < sectionList[section_index].blockStates.dataListLength; ++i) {
+
+    constexpr size_t SECTION_SIZE = 4096;
+    int32_t i_coords[SECTION_SIZE];
+    int32_t j_coords[SECTION_SIZE];
+    int32_t k_coords[SECTION_SIZE];
+    int32_t palette_index[SECTION_SIZE];
+
+    // First loop
+    for (int i = 0; i < sectionList[section_index].blockStates.dataListLength - 1; ++i) {
         uint64_t word = sectionList[section_index].blockStates.dataList[i];
 
         for (int j = 0; j < indexes_per_element; ++j) {
             uint32_t globalIndex = i * indexes_per_element + j;
-            if (globalIndex == dataIndex) {
-                uint32_t paletteIndex = (uint32_t)(word & bitmask);
-                std::cout << "Block: " << sectionList[section_index].blockStates.palleteList[paletteIndex].name << std::endl;
-            }
+            uint32_t paletteIndex = (uint32_t)(word & bitmask);
+            
+            uint32_t localX, localY, localZ;
+            helpers::globalIndexToLocalCoords(globalIndex, localX, localY, localZ);
+
+            i_coords[globalIndex] = localX;
+            j_coords[globalIndex] = localY;
+            k_coords[globalIndex] = localZ;
+            palette_index[globalIndex] = paletteIndex;
+            
             word = word >> num_bits;
         }
     }
+
+    // Final word
+    int32_t finalWordIndex = sectionList[section_index].blockStates.dataListLength - 1;
+    int64_t finalWord = sectionList[section_index].blockStates.dataList[finalWordIndex];
+    for (int j = 0; j < last_state_elements; ++j) {
+        uint32_t globalIndex = finalWordIndex * indexes_per_element + j;
+        uint32_t paletteIndex = (uint32_t)(finalWord & bitmask);
+        
+        uint32_t localX, localY, localZ;
+        helpers::globalIndexToLocalCoords(globalIndex, localX, localY, localZ);
+
+        i_coords[globalIndex] = localX;
+        j_coords[globalIndex] = localY;
+        k_coords[globalIndex] = localZ;
+        palette_index[globalIndex] = paletteIndex;
+        
+        finalWord = finalWord >> num_bits;
+    }
+
+
+    // get coords relative to section/chunk
+    uint32_t localX = x & 15;
+    uint32_t localY = y & 15;
+    uint32_t localZ = z & 15;
+
+    // calculate index within data array of section
+    uint32_t dataIndex = localY * 256 + localZ*16 + localX;
+
+    std::cout << "Block: " << sectionList[section_index].blockStates.palleteList[palette_index[dataIndex]].name << std::endl;
+
     
     delete[] data;
     inputFile.close();

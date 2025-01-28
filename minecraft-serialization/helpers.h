@@ -154,6 +154,15 @@ uint32_t bitLength(uint32_t n) {
     return 32 -__builtin_clz(n);
 }
 
+// --------------------------> globalIndexToLocalCoords <--------------------------
+
+void globalIndexToLocalCoords(uint32_t globalIndex, uint32_t& localX, uint32_t& localY, uint32_t& localZ) {
+    localY = globalIndex / 256;
+    uint32_t remainder = globalIndex % 256;
+    localZ = remainder / 16;
+    localX = remainder % 16;
+}
+
 } // namespace helpers
 
 #endif // ifndef HELPERS

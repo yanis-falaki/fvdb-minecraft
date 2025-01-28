@@ -652,6 +652,16 @@ inline void sectionsList(uint8_t*& iterator, SectionListPack& sectionsList) {
     exploreList(iterator, listStrategy, sectionsList);
 }
 
+// --------------------------> getSectionListPack <--------------------------
+
+// 'iterator' is passed by value, so changes to it in this function
+// do not affect the original pointer passed by the caller.
+SectionListPack getSectionListPack(uint8_t* localIterator) {
+    bool foundSections = findSectionsList(localIterator);
+    SectionListPack sectionList;
+    sectionsList(localIterator, sectionList);
+    return sectionList;
+}
 
 } // namespace NBTParser
 

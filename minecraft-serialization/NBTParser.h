@@ -43,6 +43,37 @@ inline void printList(uint8_t*& iterator);
 inline void skipList(uint8_t*& iterator);
 inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalettePack);
 
+// --------------------------> GlobalPalette <--------------------------
+
+struct GlobalPalette {
+    std::vector<std::string> indexToStringVector;
+    std::unordered_map<std::string, uint32_t> nameToIndexMap;
+
+    GlobalPalette() {
+        std::string block_list_file_path = std::format("{}/block_list.txt", PROJECT_SOURCE_DIR);
+        std::ifstream infile(block_list_file_path);
+        int i = 0;
+        for (std::string line; std::getline(infile, line); ) 
+        {
+            nameToIndexMap[line] = i;
+            indexToStringVector.push_back(line);
+            ++i;
+        }
+    }
+
+    // Numeric index operator
+    const std::string& operator[](uint32_t index) const {
+        return indexToStringVector[index];
+    }
+
+    // String lookup operator
+    uint32_t operator[](const std::string& name) const {
+        return nameToIndexMap.at(name);
+    }
+
+    uint32_t size() { return indexToStringVector.size(); }
+};
+
 // --------------------------> Tags enum <--------------------------
 
 enum class Tag {
@@ -678,38 +709,6 @@ SectionListPack getSectionListPack(uint8_t* localIterator) {
     sectionsList(localIterator, sectionList);
     return sectionList;
 }
-
-// --------------------------> GlobalPalette <--------------------------
-
-struct GlobalPalette {
-    std::vector<std::string> indexToStringVector;
-    std::unordered_map<std::string, uint32_t> nameToIndexMap;
-
-    GlobalPalette() {
-        std::string block_list_file_path = std::format("{}/block_list.txt", PROJECT_SOURCE_DIR);
-        std::ifstream infile(block_list_file_path);
-        int i = 0;
-        for (std::string line; std::getline(infile, line); ) 
-        {
-            nameToIndexMap[line] = i;
-            indexToStringVector.push_back(line);
-            ++i;
-        }
-    }
-
-    // Numeric index operator
-    const std::string& operator[](uint32_t index) const {
-        return indexToStringVector[index];
-    }
-
-    // String lookup operator
-    uint32_t operator[](const std::string& name) const {
-        return nameToIndexMap.at(name);
-    }
-
-    uint32_t size() { return indexToStringVector.size(); }
-};
-
 
 // --------------------------> sectionToCoords <--------------------------
 

@@ -15,9 +15,14 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <vector>
 #include <helpers.h>
 #include <cstring>
+#include <unordered_map>
+#include <fstream>
+#include <format>
 
 namespace NBTParser {
 
+// --------------------------> constant values <--------------------------
+static constexpr size_t SECTION_SIZE = 4096;
 
 // --------------------------> Parameter Pack Forward Declarations <--------------------------
 
@@ -674,16 +679,53 @@ SectionListPack getSectionListPack(uint8_t* localIterator) {
     return sectionList;
 }
 
+// --------------------------> GlobalPalette <--------------------------
+
+struct GlobalPalette {
+    std::vector<std::string> indexToStringVector;
+    std::unordered_map<std::string, uint32_t> nameToIndexMap;
+
+    GlobalPalette() {
+        std::string block_list_file_path = std::format("{}/block_list.txt", PROJECT_SOURCE_DIR);
+        std::ifstream infile(block_list_file_path);
+        int i = 0;
+        for (std::string line; std::getline(infile, line); ) 
+        {
+            nameToIndexMap[line] = i;
+            indexToStringVector.push_back(line);
+            ++i;
+        }
+    }
+
+    // Numeric index operator
+    const std::string& operator[](uint32_t index) const {
+        return indexToStringVector[index];
+    }
+
+    // String lookup operator
+    uint32_t operator[](const std::string& name) const {
+        return nameToIndexMap.at(name);
+    }
+
+    uint32_t size() { return indexToStringVector.size(); }
+};
+
+
 // --------------------------> sectionToCoords <--------------------------
 
 /// @brief parses a sectionList into a list of ijks and associated block
 /// @param sectionList 
 /// @param section_index 
-void sectionToCoords(SectionPack& section, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_index) {
-    constexpr size_t SECTION_SIZE = 4096;
+void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
+    // generate localToGlobalPaletteIndex array
+    uint32_t localPaletteSize = section.blockStates.palleteList.size();
+    uint32_t localToGlobalPaletteIndex[localPaletteSize];
+    for(uint32_t i = 0; i < localPaletteSize; i++) {
+        localToGlobalPaletteIndex[i] = globalPalette[section.blockStates.palleteList[i].name];
+    }
 
     // calculate min number of bits to represent palette index
-    uint32_t num_bits = helpers::bitLength(section.blockStates.palleteList.size());
+    uint32_t num_bits = helpers::bitLength(localPaletteSize);
     if (num_bits < 4) num_bits = 4;
 
     // make bitmask
@@ -699,7 +741,7 @@ void sectionToCoords(SectionPack& section, int32_t* i_coords, int32_t* j_coords,
 
         for (int j = 0; j < indexes_per_element; ++j) {
             uint32_t globalIndex = i * indexes_per_element + j;
-            uint32_t paletteIndex = (uint32_t)(word & bitmask);
+            uint32_t localPaletteIndex = (uint32_t)(word & bitmask);
             
             uint32_t localX, localY, localZ;
             helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
@@ -707,7 +749,7 @@ void sectionToCoords(SectionPack& section, int32_t* i_coords, int32_t* j_coords,
             i_coords[globalIndex] = localX;
             j_coords[globalIndex] = localY+ section.y;
             k_coords[globalIndex] = localZ;
-            palette_index[globalIndex] = paletteIndex;
+            global_palette_index[globalIndex] = localToGlobalPaletteIndex[localPaletteIndex];
             
             word = word >> num_bits;
         }
@@ -718,7 +760,7 @@ void sectionToCoords(SectionPack& section, int32_t* i_coords, int32_t* j_coords,
     int64_t finalWord = section.blockStates.dataList[finalWordIndex];
     for (int j = 0; j < last_state_elements; ++j) {
         uint32_t globalIndex = finalWordIndex * indexes_per_element + j;
-        uint32_t paletteIndex = (uint32_t)(finalWord & bitmask);
+        uint32_t localPaletteIndex = (uint32_t)(finalWord & bitmask);
         
         uint32_t localX, localY, localZ;
         helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
@@ -726,7 +768,7 @@ void sectionToCoords(SectionPack& section, int32_t* i_coords, int32_t* j_coords,
         i_coords[globalIndex] = localX;
         j_coords[globalIndex] = localY + section.y;
         k_coords[globalIndex] = localZ;
-        palette_index[globalIndex] = paletteIndex;
+        global_palette_index[globalIndex] = localToGlobalPaletteIndex[localPaletteIndex];
         
         finalWord = finalWord >> num_bits;
     }

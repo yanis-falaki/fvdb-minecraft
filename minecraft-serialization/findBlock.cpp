@@ -91,18 +91,18 @@ int main()
     NBTParser::SectionPack sectionDest;
      sectionList.getSectionWithY(&sectionDest, chunkY);
 
-    constexpr size_t SECTION_SIZE = 4096;
-    int32_t i_coords[SECTION_SIZE];
-    int32_t j_coords[SECTION_SIZE];
-    int32_t k_coords[SECTION_SIZE];
-    int32_t palette_index[SECTION_SIZE];
+    int32_t i_coords[NBTParser::SECTION_SIZE];
+    int32_t j_coords[NBTParser::SECTION_SIZE];
+    int32_t k_coords[NBTParser::SECTION_SIZE];
+    int32_t palette_index[NBTParser::SECTION_SIZE];
 
-    NBTParser::sectionToCoords(sectionDest, i_coords, j_coords, k_coords, palette_index);
+    NBTParser::GlobalPalette globalPalette;
+
+    NBTParser::sectionToCoords(globalPalette, sectionDest, i_coords, j_coords, k_coords, palette_index);
 
     uint32_t dataIndex = NBTParser::helpers::globalCoordsToSectionDataIndex(x, y, z);
 
-    std::cout << "Block: " << sectionDest.blockStates.palleteList[palette_index[dataIndex]].name << std::endl;
-
+    std::cout << "Block: " << globalPalette[palette_index[dataIndex]] << "\t Index: " << palette_index[dataIndex] <<  std::endl;
     
     delete[] data;
     inputFile.close();

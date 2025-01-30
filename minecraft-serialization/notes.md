@@ -1,7 +1,7 @@
 ## TODO
 
-- [ ] Move individual section serializer code to NBTParser.h
-- [ ] Make serialized sections use a global palette. (rather than palette index)
+- [x] Move individual section serializer code to NBTParser.h
+- [x] Make serialized sections use a global palette. (rather than palette index)
 - [ ] Create code which serializes all sections (entire chunk)
 - [ ] Write script which serializes entire world
 - [ ] Make chunk serialization parallel with cuda

@@ -14,14 +14,11 @@ with open("raw_block_list.txt", "r") as file:
 pattern = r"Block (\w+)"
 
 # Extract block names
-block_names = re.findall(pattern, data)
+block_names_unprocessed = re.findall(pattern, data)
 
-# Convert the block names to JSON
-json_data = json.dumps(block_names, indent=4)
+# Make lower case and prepend
+block_names = ["minecraft:" + s.lower() for s in block_names_unprocessed]
 
-# Save the block names to a JSON file
-with open("block_list.json", "w") as json_file:
-    json_file.write(json_data)
-
-# Print the JSON output
-print(json_data)
+with open('block_list.txt', 'w') as f:
+    for name in block_names:
+        f.write(f"{name}\n")

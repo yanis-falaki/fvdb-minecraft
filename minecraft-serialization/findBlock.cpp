@@ -12,7 +12,7 @@ int bit_length(int n);
 int main()
 {
     int32_t x = 424;
-    int32_t y = 104;
+    int32_t y = 50;
     int32_t z = 57;
 
     // Chunk to look for
@@ -89,6 +89,10 @@ int main()
     NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data, chunkX, chunkZ);
 
     int32_t sectionIndex = sectionList.getSectionIndexWithY(chunkY);
+    if (sectionIndex == -1){
+        std::cout << "Block being searched for does not exist!" << std::endl;
+        return 1;
+    }
 
     int32_t i_coords[NBTParser::SECTION_SIZE*sectionList.size()];
     int32_t j_coords[NBTParser::SECTION_SIZE*sectionList.size()];

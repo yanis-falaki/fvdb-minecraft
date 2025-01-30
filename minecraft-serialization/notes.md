@@ -2,8 +2,11 @@
 
 - [x] Move individual section serializer code to NBTParser.h
 - [x] Make serialized sections use a global palette. (rather than palette index)
-- [ ] Create code which serializes all sections (entire chunk)
-- [ ] Write script which serializes entire world
+- [x] Create code which serializes all sections (entire chunk)
+- [ ] Write script which serializes entire region into list of points
+- [ ] Extend or write another script which serializes all regions into list of points
+- [ ] Serialize list of points into VDB.
+- [ ] Find out how to go from vdb/nvdb file to fvdb.
 - [ ] Make chunk serialization parallel with cuda
 
 

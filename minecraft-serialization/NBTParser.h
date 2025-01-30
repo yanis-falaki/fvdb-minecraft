@@ -299,6 +299,17 @@ struct SectionListPack {
     const SectionPack* begin() const { return sections.data(); }
     const SectionPack* end() const { return sections.data() + sections.size(); }
 
+    inline bool getSectionWithY(SectionPack* dest, int32_t chunkY) {
+        uint32_t section_index;
+        for (uint32_t i = 0; i < sections.size(); ++i) {
+            if (sections[i].y == chunkY){
+                *dest = sections[i];
+                return true;
+            }
+        }
+        return false;
+    }
+
     size_t size() const { return sections.size(); }
 
     SectionListPack() = default;
@@ -661,6 +672,64 @@ SectionListPack getSectionListPack(uint8_t* localIterator) {
     SectionListPack sectionList;
     sectionsList(localIterator, sectionList);
     return sectionList;
+}
+
+// --------------------------> sectionToCoords <--------------------------
+
+/// @brief parses a sectionList into a list of ijks and associated block
+/// @param sectionList 
+/// @param section_index 
+void sectionToCoords(SectionPack& section, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_index) {
+    constexpr size_t SECTION_SIZE = 4096;
+
+    // calculate min number of bits to represent palette index
+    uint32_t num_bits = helpers::bitLength(section.blockStates.palleteList.size());
+    if (num_bits < 4) num_bits = 4;
+
+    // make bitmask
+    uint64_t bitmask = ((1ULL << num_bits) - 1);
+
+    uint32_t indexes_per_element = 64 / num_bits;
+    uint32_t last_state_elements = SECTION_SIZE % indexes_per_element;
+    if (last_state_elements == 0) last_state_elements = indexes_per_element;
+
+    // First loop
+    for (int i = 0; i < section.blockStates.dataListLength - 1; ++i) {
+        uint64_t word = section.blockStates.dataList[i];
+
+        for (int j = 0; j < indexes_per_element; ++j) {
+            uint32_t globalIndex = i * indexes_per_element + j;
+            uint32_t paletteIndex = (uint32_t)(word & bitmask);
+            
+            uint32_t localX, localY, localZ;
+            helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
+
+            i_coords[globalIndex] = localX;
+            j_coords[globalIndex] = localY+ section.y;
+            k_coords[globalIndex] = localZ;
+            palette_index[globalIndex] = paletteIndex;
+            
+            word = word >> num_bits;
+        }
+    }
+
+    // Final word
+    int32_t finalWordIndex = section.blockStates.dataListLength - 1;
+    int64_t finalWord = section.blockStates.dataList[finalWordIndex];
+    for (int j = 0; j < last_state_elements; ++j) {
+        uint32_t globalIndex = finalWordIndex * indexes_per_element + j;
+        uint32_t paletteIndex = (uint32_t)(finalWord & bitmask);
+        
+        uint32_t localX, localY, localZ;
+        helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
+
+        i_coords[globalIndex] = localX;
+        j_coords[globalIndex] = localY + section.y;
+        k_coords[globalIndex] = localZ;
+        palette_index[globalIndex] = paletteIndex;
+        
+        finalWord = finalWord >> num_bits;
+    }
 }
 
 } // namespace NBTParser

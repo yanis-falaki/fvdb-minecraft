@@ -11,9 +11,9 @@ int bit_length(int n);
 
 int main()
 {
-    int32_t x = 0;
-    int32_t y = 0;
-    int32_t z = 0;
+    int32_t x = 424;
+    int32_t y = 104;
+    int32_t z = 57;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -86,23 +86,23 @@ int main()
 
     //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
 
-    NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data);
+    NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data, chunkX, chunkZ);
 
-    NBTParser::SectionPack sectionDest;
-     sectionList.getSectionWithY(&sectionDest, chunkY);
+    int32_t sectionIndex = sectionList.getSectionIndexWithY(chunkY);
 
-    int32_t i_coords[NBTParser::SECTION_SIZE];
-    int32_t j_coords[NBTParser::SECTION_SIZE];
-    int32_t k_coords[NBTParser::SECTION_SIZE];
-    int32_t palette_index[NBTParser::SECTION_SIZE];
+    int32_t i_coords[NBTParser::SECTION_SIZE*sectionList.size()];
+    int32_t j_coords[NBTParser::SECTION_SIZE*sectionList.size()];
+    int32_t k_coords[NBTParser::SECTION_SIZE*sectionList.size()];
+    int32_t palette_index[NBTParser::SECTION_SIZE*sectionList.size()];
 
     NBTParser::GlobalPalette globalPalette;
 
-    NBTParser::sectionToCoords(globalPalette, sectionDest, i_coords, j_coords, k_coords, palette_index);
+    NBTParser::sectionListToCoords(globalPalette, sectionList, i_coords, j_coords, k_coords, palette_index);
 
     uint32_t dataIndex = NBTParser::helpers::globalCoordsToSectionDataIndex(x, y, z);
 
-    std::cout << "Block: " << globalPalette[palette_index[dataIndex]] << "\t Index: " << palette_index[dataIndex] <<  std::endl;
+    std::cout << "Block: " << globalPalette[palette_index[dataIndex + sectionIndex*NBTParser::SECTION_SIZE]] << "\t Index: " << palette_index[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] <<  std::endl;
+    std::cout << "Coords: " << i_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << ", " << j_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << ", " << k_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << std::endl;
     
     delete[] data;
     inputFile.close();

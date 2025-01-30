@@ -70,7 +70,10 @@
         "sstream": "cpp",
         "forward_list": "cpp",
         "__hash_table": "cpp",
-        "__split_buffer": "cpp"
+        "__split_buffer": "cpp",
+        "codecvt": "cpp",
+        "iomanip": "cpp",
+        "semaphore": "cpp"
     },
     "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/",
     "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/build",

@@ -23,6 +23,7 @@ namespace NBTParser {
 
 // --------------------------> constant values <--------------------------
 static constexpr size_t SECTION_SIZE = 4096;
+static constexpr size_t SECTION_LENGTH = 16;
 
 // --------------------------> Parameter Pack Forward Declarations <--------------------------
 
@@ -311,12 +312,25 @@ struct BlockStatesPack {
 
 struct SectionPack {
     BlockStatesPack blockStates;
+    int32_t yOffset;
     int32_t y;
     SectionPack() = default;
 };
 
+// Section List AKA Chunk
 struct SectionListPack {
     std::vector<SectionPack> sections;
+    uint32_t xOffset;
+    uint32_t zOffset;
+    uint32_t x;
+    uint32_t z;
+
+    SectionListPack(int32_t chunkX, int32_t chunkZ) {
+        xOffset = chunkX  << 4;
+        zOffset = chunkZ << 4;
+        x = chunkX;
+        z = chunkZ;
+    }
     
     SectionPack& operator[](size_t index) {
         return sections[index];
@@ -344,6 +358,16 @@ struct SectionListPack {
             }
         }
         return false;
+    }
+
+    inline int32_t getSectionIndexWithY(int32_t chunkY) {
+        uint32_t section_index;
+        for (uint32_t i = 0; i < sections.size(); ++i) {
+            if (sections[i].y == chunkY){
+                return i;
+            }
+        }
+        return -1;
     }
 
     size_t size() const { return sections.size(); }
@@ -512,6 +536,7 @@ struct PrintNBTStructureStrategy : BaseNBTStrategy<> {
 struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
     inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
         sectionPack.y = readNum<Tag::Byte>(iterator);
+        sectionPack.yOffset = sectionPack.y << 4;
     }
 
     inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
@@ -702,10 +727,10 @@ inline void sectionsList(uint8_t*& iterator, SectionListPack& sectionsList) {
 // --------------------------> getSectionListPack <--------------------------
 
 // 'iterator' is passed by value, so changes to it in this function
-// do not affect the original pointer passed by the caller.
-SectionListPack getSectionListPack(uint8_t* localIterator) {
+// do not affect the original poizOffsetnter passed by the caller.
+SectionListPack getSectionListPack(uint8_t* localIterator, int32_t chunkX, int32_t chunkZ) {
     bool foundSections = findSectionsList(localIterator);
-    SectionListPack sectionList;
+    SectionListPack sectionList(chunkX, chunkZ);
     sectionsList(localIterator, sectionList);
     return sectionList;
 }
@@ -715,12 +740,29 @@ SectionListPack getSectionListPack(uint8_t* localIterator) {
 /// @brief parses a sectionList into a list of ijks and associated block
 /// @param sectionList 
 /// @param section_index 
-void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
+void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
     // generate localToGlobalPaletteIndex array
     uint32_t localPaletteSize = section.blockStates.palleteList.size();
     uint32_t localToGlobalPaletteIndex[localPaletteSize];
     for(uint32_t i = 0; i < localPaletteSize; i++) {
         localToGlobalPaletteIndex[i] = globalPalette[section.blockStates.palleteList[i].name];
+    }
+
+    // Handle unary section
+    if (localPaletteSize == 1) {
+        uint32_t index = 0;
+        for (uint32_t j = 0; j < 16; j++) {
+            for (uint32_t k = 0; k < 16; ++k) {
+                for (uint32_t i = 0; i < 16; ++i) {
+                    i_coords[index] = i + xOffset;
+                    j_coords[index] = j + section.yOffset;
+                    k_coords[index] = k + zOffset;
+                    global_palette_index[index] = localToGlobalPaletteIndex[0];
+                    ++index; 
+                }
+            }
+        }
+        return;
     }
 
     // calculate min number of bits to represent palette index
@@ -745,9 +787,9 @@ void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t
             uint32_t localX, localY, localZ;
             helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
-            i_coords[globalIndex] = localX;
-            j_coords[globalIndex] = localY+ section.y;
-            k_coords[globalIndex] = localZ;
+            i_coords[globalIndex] = localX + xOffset;
+            j_coords[globalIndex] = localY + section.yOffset;
+            k_coords[globalIndex] = localZ + zOffset;
             global_palette_index[globalIndex] = localToGlobalPaletteIndex[localPaletteIndex];
             
             word = word >> num_bits;
@@ -764,12 +806,23 @@ void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t
         uint32_t localX, localY, localZ;
         helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
-        i_coords[globalIndex] = localX;
-        j_coords[globalIndex] = localY + section.y;
-        k_coords[globalIndex] = localZ;
+        i_coords[globalIndex] = localX + xOffset;
+        j_coords[globalIndex] = localY + section.yOffset;
+        k_coords[globalIndex] = localZ + zOffset;
         global_palette_index[globalIndex] = localToGlobalPaletteIndex[localPaletteIndex];
         
         finalWord = finalWord >> num_bits;
+    }
+}
+
+// --------------------------> sectionListToCoords <--------------------------
+
+void sectionListToCoords(GlobalPalette& globalPalette, SectionListPack& sectionList, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
+    uint32_t numSections = sectionList.size();
+
+    for (uint32_t w = 0; w < numSections; ++w) {
+        sectionToCoords(globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + w*SECTION_SIZE, j_coords + w*SECTION_SIZE,
+                        k_coords + w*SECTION_SIZE, global_palette_index + w*SECTION_SIZE);
     }
 }
 

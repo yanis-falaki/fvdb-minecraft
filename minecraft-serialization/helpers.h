@@ -156,7 +156,7 @@ uint32_t bitLength(uint32_t n) {
 
 // --------------------------> sectionDataIndexToLocalCoords <--------------------------
 
-void sectionDataIndexToLocalCoords(uint32_t sectionDataIndex, uint32_t& localX, uint32_t& localY, uint32_t& localZ) {
+inline void sectionDataIndexToLocalCoords(uint32_t sectionDataIndex, uint32_t& localX, uint32_t& localY, uint32_t& localZ) {
     localY = sectionDataIndex / 256;
     uint32_t remainder = sectionDataIndex % 256;
     localZ = remainder / 16;
@@ -165,13 +165,13 @@ void sectionDataIndexToLocalCoords(uint32_t sectionDataIndex, uint32_t& localX, 
 
 // --------------------------> localCoordsToSectionDataIndex <--------------------------
 
-uint32_t localCoordsToSectionDataIndex(uint32_t localX, uint32_t localY, uint32_t localZ) {
+inline uint32_t localCoordsToSectionDataIndex(uint32_t localX, uint32_t localY, uint32_t localZ) {
     return (localY << 8) + (localZ << 4) + localX;
 }
 
 // --------------------------> globalCoordsToSectionDataIndex <--------------------------
 
-uint32_t globalCoordsToSectionDataIndex(int32_t x, int32_t y, int32_t z) {
+inline uint32_t globalCoordsToSectionDataIndex(int32_t x, int32_t y, int32_t z) {
     return ((y & 15) << 8) + ((z & 15) << 4) + (x & 15);
 }
 

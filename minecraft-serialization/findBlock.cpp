@@ -7,8 +7,6 @@
 #include <cstring>
 #include <NBTParser.h>
 
-int bit_length(int n);
-
 int main()
 {
     int32_t x = 424;

@@ -820,9 +820,10 @@ void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t
 void sectionListToCoords(GlobalPalette& globalPalette, SectionListPack& sectionList, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
     uint32_t numSections = sectionList.size();
 
+    // w << 12 = w*SECTION_SIZE
     for (uint32_t w = 0; w < numSections; ++w) {
-        sectionToCoords(globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + w*SECTION_SIZE, j_coords + w*SECTION_SIZE,
-                        k_coords + w*SECTION_SIZE, global_palette_index + w*SECTION_SIZE);
+        sectionToCoords(globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + (w << 12), j_coords + (w << 12),
+                        k_coords + + (w << 12), global_palette_index + + (w << 12));
     }
 }
 

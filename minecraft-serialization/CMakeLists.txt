@@ -10,8 +10,13 @@ find_package(ZLIB REQUIRED)
 
 # Add executables for findBlock
 add_executable(findBlock findBlock.cpp)  # Second executable
+add_executable(serializeRegion serializeRegion.cpp)  # Second executable
 
 target_include_directories(findBlock PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${ZLIB_INCLUDE_DIRS}
+)
+target_include_directories(serializeRegion PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${ZLIB_INCLUDE_DIRS}
 )
@@ -19,6 +24,10 @@ target_include_directories(findBlock PRIVATE
 target_link_libraries(findBlock PRIVATE 
     ${ZLIB_LIBRARIES}
 )
+target_link_libraries(serializeRegion PRIVATE 
+    ${ZLIB_LIBRARIES}
+)
 
 # Add PROJECT_SOURCE_DIR as a preprocessor definition for both
 target_compile_definitions(findBlock PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(serializeRegion PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

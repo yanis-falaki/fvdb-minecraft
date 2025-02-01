@@ -73,7 +73,10 @@
         "__split_buffer": "cpp",
         "codecvt": "cpp",
         "iomanip": "cpp",
-        "semaphore": "cpp"
+        "semaphore": "cpp",
+        "__tree": "cpp",
+        "map": "cpp",
+        "set": "cpp"
     },
     "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/",
     "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/build",

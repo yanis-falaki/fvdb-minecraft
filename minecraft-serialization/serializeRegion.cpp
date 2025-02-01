@@ -5,24 +5,26 @@
 #include <zlib.h>
 #include <cstdint>
 #include <cstring>
+#include <openvdb/openvdb.h>
 #include <NBTParser.h>
 
 constexpr uint32_t MAX_CHUNKS = 1024;
 
-inline void regionChunkIndexToGlobalChunkCoords(uint32_t index, uint32_t regionX, uint32_t regionZ, uint32_t& destChunkX, uint32_t& destChunkZ);
+inline void regionChunkIndexToGlobalChunkCoords(uint32_t index, int32_t regionX, int32_t regionZ, int32_t& destChunkX, int32_t& destChunkZ);
 
 struct IJKContainer {
     int32_t* i;
     int32_t* j;
     int32_t* k;
     int32_t* paletteIndex;
+    int32_t arraySize;
 
     IJKContainer() {
         i, j, k, paletteIndex = nullptr;
     }
 
     IJKContainer(uint32_t numSections) {
-        uint32_t arraySize = NBTParser::SECTION_SIZE*numSections;
+        arraySize = NBTParser::SECTION_SIZE*numSections;
         i = new int32_t[arraySize];
         j = new int32_t[arraySize];
         k = new int32_t[arraySize];
@@ -49,12 +51,16 @@ int main()
     uint32_t offset; // Offset into file for compressed chunk
     uint8_t chunk_header[5];
     uint32_t chunkSize;
-    uint32_t chunkX;
-    uint32_t chunkZ;
+    int32_t chunkX;
+    int32_t chunkZ;
 
     NBTParser::GlobalPalette globalPalette;
 
-    std::vector<IJKContainer> chunkIJKs;
+    // -----------------
+    openvdb::initialize();
+    openvdb::Int32Grid::Ptr grid = openvdb::Int32Grid::create(0);
+    openvdb::Int32Grid::Accessor accessor = grid->getAccessor();
+     // -----------------
 
     for (uint32_t i = 0; i < MAX_CHUNKS; ++i) {
         uint32_t chunk_table_offset = i << 2; // every entry is 4 bytes
@@ -87,24 +93,35 @@ int main()
 
         uint32_t uncompressedSize;
         uint8_t* data = NBTParser::helpers::uncompress_chunk(compressed, chunkSize, uncompressedSize);
-
         delete[] compressed;
 
         regionChunkIndexToGlobalChunkCoords(i, regionX, regionZ, chunkX, chunkZ); // assigns chunkX and chunkZ to global coords
         NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data, chunkX, chunkZ);
+        std::cout << "Index: " << i << "\t" << "Chunk X: " << chunkX << " Chunk Z: " << chunkZ << std::endl;
+        delete[] data;
 
-        IJKContainer ijks(sectionList.size());
-
-        NBTParser::sectionListToCoords(globalPalette, sectionList, ijks.i, ijks.j, ijks.k, ijks.paletteIndex);
-
-        chunkIJKs.push_back(ijks);
+        NBTParser::populateVDBWithSectionList(globalPalette, sectionList, accessor);
     }
 
+    grid->setName("RegionExample");
+
+    openvdb::io::File file("region.vdb");
+
+    // Add the grid pointer to a container.
+    openvdb::GridPtrVec grids;
+    grids.push_back(grid);
+
+    file.write(grids);
+    file.close();
+
+    inputFile.close();
     return 0;
 }
 
-inline void regionChunkIndexToGlobalChunkCoords(uint32_t index, uint32_t regionX, uint32_t regionZ, uint32_t& destChunkX, uint32_t& destChunkZ) {
-    destChunkX = (regionX & 31) + regionX;
-    destChunkZ = (index >> 5) + regionZ;
+inline void regionChunkIndexToGlobalChunkCoords(uint32_t index, int32_t regionX, int32_t regionZ, int32_t& destChunkX, int32_t& destChunkZ) {
+    destChunkX = (index & 31) + (regionX << 5);
+    destChunkZ = (index >> 5) + (regionZ << 5);
+
+
     return;
 }

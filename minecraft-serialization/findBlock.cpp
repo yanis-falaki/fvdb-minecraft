@@ -7,11 +7,13 @@
 #include <cstring>
 #include <NBTParser.h>
 
+void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette globalPalette, int32_t xOffset, int32_t zOffset, int32_t x, int32_t y, int32_t z);
+
 int main()
 {
-    int32_t x = 424;
-    int32_t y = 50;
-    int32_t z = 57;
+    int32_t x = 110;
+    int32_t y = 62;
+    int32_t z = 250;
 
     // Chunk to look for
     int chunkX = x >> 4;
@@ -105,9 +107,36 @@ int main()
 
     std::cout << "Block: " << globalPalette[palette_index[dataIndex + sectionIndex*NBTParser::SECTION_SIZE]] << "\t Index: " << palette_index[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] <<  std::endl;
     std::cout << "Coords: " << i_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << ", " << j_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << ", " << k_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << std::endl;
+
+    serializeChunk(sectionList[sectionIndex], globalPalette, sectionList.xOffset, sectionList.zOffset, x, y, z);
     
     delete[] data;
     inputFile.close();
     return 0;
 }
 
+void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette globalPalette, int32_t xOffset, int32_t zOffset, int32_t x, int32_t y, int32_t z) {
+    // -----------------
+    openvdb::initialize();
+    openvdb::Int32Grid::Ptr grid = openvdb::Int32Grid::create(0);
+    openvdb::Int32Grid::Accessor accessor = grid->getAccessor();
+     // -----------------
+
+    NBTParser::populateVDBWithSection(globalPalette, section, xOffset, zOffset, accessor);
+
+    grid->setName("ChunkExample");
+    grid->setTransform(
+        openvdb::math::Transform::createLinearTransform(4));
+    grid->setGridClass(openvdb::GRID_FOG_VOLUME);
+
+    std::cout << globalPalette[accessor.getValue(openvdb::Coord(x, y, z))] << std::endl;
+
+    openvdb::io::File file("chunk.vdb");
+
+    // Add the grid pointer to a container.
+    openvdb::GridPtrVec grids;
+    grids.push_back(grid);
+
+    file.write(grids);
+    file.close();
+}

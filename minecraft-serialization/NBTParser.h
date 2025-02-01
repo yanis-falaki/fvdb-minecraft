@@ -18,6 +18,7 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <unordered_map>
 #include <fstream>
 #include <format>
+#include <openvdb/openvdb.h>
 
 namespace NBTParser {
 
@@ -320,10 +321,10 @@ struct SectionPack {
 // Section List AKA Chunk
 struct SectionListPack {
     std::vector<SectionPack> sections;
-    uint32_t xOffset;
-    uint32_t zOffset;
-    uint32_t x;
-    uint32_t z;
+    int32_t xOffset;
+    int32_t zOffset;
+    int32_t x;
+    int32_t z;
 
     SectionListPack(int32_t chunkX, int32_t chunkZ) {
         xOffset = chunkX  << 4;
@@ -735,12 +736,10 @@ SectionListPack getSectionListPack(uint8_t* localIterator, int32_t chunkX, int32
     return sectionList;
 }
 
-// --------------------------> sectionToCoords <--------------------------
+// --------------------------> commonSectionUnpackingLogic <--------------------------
 
-/// @brief parses a sectionList into a list of ijks and associated block
-/// @param sectionList 
-/// @param section_index 
-void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
+template<class UnpackSectionStrategy, typename... OptionalParams>
+void commonSectionUnpackingLogic(UnpackSectionStrategy unpackSectionStrategy, GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, OptionalParams&&... optionalParams) {
     // generate localToGlobalPaletteIndex array
     uint32_t localPaletteSize = section.blockStates.palleteList.size();
     uint32_t localToGlobalPaletteIndex[localPaletteSize];
@@ -754,10 +753,7 @@ void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t
         for (uint32_t j = 0; j < 16; j++) {
             for (uint32_t k = 0; k < 16; ++k) {
                 for (uint32_t i = 0; i < 16; ++i) {
-                    i_coords[index] = i + xOffset;
-                    j_coords[index] = j + section.yOffset;
-                    k_coords[index] = k + zOffset;
-                    global_palette_index[index] = localToGlobalPaletteIndex[0];
+                    unpackSectionStrategy.insert(index, i + xOffset, j + section.yOffset, k + zOffset, localToGlobalPaletteIndex[0], optionalParams...);
                     ++index; 
                 }
             }
@@ -787,10 +783,7 @@ void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t
             uint32_t localX, localY, localZ;
             helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
-            i_coords[globalIndex] = localX + xOffset;
-            j_coords[globalIndex] = localY + section.yOffset;
-            k_coords[globalIndex] = localZ + zOffset;
-            global_palette_index[globalIndex] = localToGlobalPaletteIndex[localPaletteIndex];
+            unpackSectionStrategy.insert(globalIndex, localX + xOffset, localY + section.yOffset, localZ + zOffset, localToGlobalPaletteIndex[localPaletteIndex], optionalParams...);
             
             word = word >> num_bits;
         }
@@ -806,24 +799,73 @@ void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t
         uint32_t localX, localY, localZ;
         helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
 
-        i_coords[globalIndex] = localX + xOffset;
-        j_coords[globalIndex] = localY + section.yOffset;
-        k_coords[globalIndex] = localZ + zOffset;
-        global_palette_index[globalIndex] = localToGlobalPaletteIndex[localPaletteIndex];
+        unpackSectionStrategy.insert(globalIndex, localX + xOffset, localY + section.yOffset, localZ + zOffset, localToGlobalPaletteIndex[localPaletteIndex], optionalParams...);
         
         finalWord = finalWord >> num_bits;
     }
 }
 
+// --------------------------> BaseUnpackSectionStrategy <--------------------------
+
+struct BaseUnpackSectionStrategy {
+    inline void insert(uint32_t dataIndex, int32_t i, int32_t j, int32_t k, int32_t paletteIndex, auto& optionalParams) {}
+};
+
+// --------------------------> SectionToCoordsStrategy <--------------------------
+
+struct SectionToCoordsStrategy : BaseUnpackSectionStrategy {
+    inline void insert(uint32_t dataIndex, int32_t i, int32_t j, int32_t k, int32_t paletteIndex, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_indices) {
+        i_coords[dataIndex] = i;
+        j_coords[dataIndex] = j;
+        k_coords[dataIndex] = k;
+        palette_indices[dataIndex] = paletteIndex;
+    }
+};
+
+// --------------------------> InsertSectionInVDBStrategy <--------------------------
+
+struct InsertSectionInVDBStrategy : BaseUnpackSectionStrategy {
+    inline void insert(uint32_t dataIndex, int32_t i, int32_t j, int32_t k, int32_t paletteIndex, auto& accessor) {
+        if (paletteIndex == 0) return;
+        accessor.setValue(openvdb::Coord(i, j, k), paletteIndex);
+    }
+};
+
+// --------------------------> sectionToCoords <--------------------------
+
+/// @brief parses a sectionList into a list of ijks and associated block
+void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_indices) {
+    SectionToCoordsStrategy strategy;
+    commonSectionUnpackingLogic(strategy, globalPalette, section, xOffset, zOffset, i_coords, j_coords, k_coords, palette_indices);
+}
+
 // --------------------------> sectionListToCoords <--------------------------
 
-void sectionListToCoords(GlobalPalette& globalPalette, SectionListPack& sectionList, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* global_palette_index) {
+void sectionListToCoords(GlobalPalette& globalPalette, SectionListPack& sectionList, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_indices) {
+    SectionToCoordsStrategy strategy;
     uint32_t numSections = sectionList.size();
 
     // w << 12 = w*SECTION_SIZE
     for (uint32_t w = 0; w < numSections; ++w) {
-        sectionToCoords(globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + (w << 12), j_coords + (w << 12),
-                        k_coords + + (w << 12), global_palette_index + + (w << 12));
+        commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + (w << 12), j_coords + (w << 12), k_coords + (w << 12), palette_indices + (w << 12));
+    }
+}
+
+// --------------------------> populateVDBWithSection <------------------------
+void populateVDBWithSection(GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, auto& accessor) {
+    InsertSectionInVDBStrategy strategy;
+    commonSectionUnpackingLogic(strategy, globalPalette, section, xOffset, zOffset, accessor);
+}
+
+// --------------------------> populateVDBWithSectionList <--------------------------
+
+void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& sectionList, auto& accessor) {
+    InsertSectionInVDBStrategy strategy;
+    uint32_t numSections = sectionList.size();
+
+    // w << 12 = w*SECTION_SIZE
+    for (uint32_t w = 0; w < numSections; ++w) {
+        commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, accessor);
     }
 }
 

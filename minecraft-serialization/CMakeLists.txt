@@ -28,6 +28,12 @@ target_link_libraries(serializeRegion PRIVATE
     ${ZLIB_LIBRARIES}
 )
 
+# Include OpenVDB
+list(APPEND CMAKE_MODULE_PATH "/usr/local/lib/cmake/OpenVDB")
+find_package(OpenVDB REQUIRED)
+target_link_libraries(serializeRegion PRIVATE OpenVDB::openvdb)
+target_link_libraries(findBlock PRIVATE OpenVDB::openvdb)
+
 # Add PROJECT_SOURCE_DIR as a preprocessor definition for both
 target_compile_definitions(findBlock PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_compile_definitions(serializeRegion PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

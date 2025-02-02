@@ -84,11 +84,17 @@ void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int3
         delete[] compressed;
 
         NBTParser::helpers::regionChunkIndexToGlobalChunkCoords(i, regionX, regionZ, chunkX, chunkZ); // assigns chunkX and chunkZ to global coords
+
+        std::cout << "Processing chunk " << i << " at (" << chunkX << ", " << chunkZ << ")\n";
+
         NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data, chunkX, chunkZ);
         delete[] data;
 
+        if (sectionList.size() <= 0) continue;
+
         NBTParser::VDB::populateVDBWithSectionList(globalPalette, sectionList, accessor);
     }
+
     inputFile.close();
 }
 

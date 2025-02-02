@@ -632,6 +632,12 @@ void exploreList(uint8_t*& iterator, ListStrategy listStrategy, OptionalParamPac
     else if (list_tag == Tag::List) {
         listStrategy.handleList(iterator, listLength, optionalParamPack...);
     }
+    else if (list_tag == Tag::Int_Array) {
+        listStrategy.handleIntArray(iterator, listLength, optionalParamPack...);
+    }
+    else if (list_tag == Tag::Long_Array) {
+        listStrategy.handleLongArray(iterator, listLength, optionalParamPack...);
+    }
 }
 
 // --------------------------> List Strategies <--------------------------
@@ -653,6 +659,22 @@ struct BaseListStrategy {
 
     inline void handleList(uint8_t*& iterator, uint32_t listLength, Args&... args) {
         for (int i = 0; i < listLength; ++i) skipList(iterator);
+    }
+
+    inline void handleIntArray(uint8_t*& iterator, uint32_t listLength, Args&... args) {
+        int32_t currentArrayLength;
+        for (int i = 0; i < listLength; ++i) {
+            currentArrayLength = readNum<Tag::Int>(iterator);
+            iterator += 4 + currentArrayLength*4;
+        }
+    }
+
+    inline void handleLongArray(uint8_t*& iterator, uint32_t listLength, Args&... args) {
+        int32_t currentArrayLength;
+        for (int i = 0; i < listLength; ++i) {
+            currentArrayLength = readNum<Tag::Int>(iterator);
+            iterator += 4 + currentArrayLength*8;
+        }
     }
 };
 
@@ -727,7 +749,7 @@ inline void sectionsList(uint8_t*& iterator, SectionListPack& sectionsList) {
 // --------------------------> getSectionListPack <--------------------------
 
 // 'iterator' is passed by value, so changes to it in this function
-// do not affect the original poizOffsetnter passed by the caller.
+// do not affect the original position of the iterator passed by the caller.
 SectionListPack getSectionListPack(uint8_t* localIterator, int32_t chunkX, int32_t chunkZ) {
     bool foundSections = findSectionsList(localIterator);
     SectionListPack sectionList(chunkX, chunkZ);

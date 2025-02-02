@@ -175,6 +175,22 @@ inline uint32_t globalCoordsToSectionDataIndex(int32_t x, int32_t y, int32_t z) 
     return ((y & 15) << 8) + ((z & 15) << 4) + (x & 15);
 }
 
+// --------------------------> regionChunkIndexToGlobalChunkCoords <--------------------------
+
+inline void regionChunkIndexToGlobalChunkCoords(uint32_t index, int32_t regionX, int32_t regionZ, int32_t& destChunkX, int32_t& destChunkZ) {
+    destChunkX = (index & 31) + (regionX << 5);
+    destChunkZ = (index >> 5) + (regionZ << 5);
+    return;
+}
+
+// --------------------------> regionChunkIndexToLocalChunkCoords <--------------------------
+
+inline void regionChunkIndexToLocalChunkCoords(uint32_t index, int32_t& destChunkX, int32_t& destChunkZ) {
+    destChunkX = (index & 31);
+    destChunkZ = (index >> 5);
+    return;
+}
+
 } // namespace helpers
 
 #endif // ifndef HELPERS

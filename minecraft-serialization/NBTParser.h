@@ -18,13 +18,13 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <unordered_map>
 #include <fstream>
 #include <format>
-#include <openvdb/openvdb.h>
 
 namespace NBTParser {
 
 // --------------------------> constant values <--------------------------
 static constexpr size_t SECTION_SIZE = 4096;
 static constexpr size_t SECTION_LENGTH = 16;
+static constexpr size_t MAX_CHUNKS_IN_REGION = 1024;
 
 // --------------------------> Parameter Pack Forward Declarations <--------------------------
 
@@ -822,15 +822,6 @@ struct SectionToCoordsStrategy : BaseUnpackSectionStrategy {
     }
 };
 
-// --------------------------> InsertSectionInVDBStrategy <--------------------------
-
-struct InsertSectionInVDBStrategy : BaseUnpackSectionStrategy {
-    inline void insert(uint32_t dataIndex, int32_t i, int32_t j, int32_t k, int32_t paletteIndex, auto& accessor) {
-        if (paletteIndex == 0) return;
-        accessor.setValue(openvdb::Coord(i, j, k), paletteIndex);
-    }
-};
-
 // --------------------------> sectionToCoords <--------------------------
 
 /// @brief parses a sectionList into a list of ijks and associated block
@@ -848,24 +839,6 @@ void sectionListToCoords(GlobalPalette& globalPalette, SectionListPack& sectionL
     // w << 12 = w*SECTION_SIZE
     for (uint32_t w = 0; w < numSections; ++w) {
         commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + (w << 12), j_coords + (w << 12), k_coords + (w << 12), palette_indices + (w << 12));
-    }
-}
-
-// --------------------------> populateVDBWithSection <------------------------
-void populateVDBWithSection(GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, auto& accessor) {
-    InsertSectionInVDBStrategy strategy;
-    commonSectionUnpackingLogic(strategy, globalPalette, section, xOffset, zOffset, accessor);
-}
-
-// --------------------------> populateVDBWithSectionList <--------------------------
-
-void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& sectionList, auto& accessor) {
-    InsertSectionInVDBStrategy strategy;
-    uint32_t numSections = sectionList.size();
-
-    // w << 12 = w*SECTION_SIZE
-    for (uint32_t w = 0; w < numSections; ++w) {
-        commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, accessor);
     }
 }
 

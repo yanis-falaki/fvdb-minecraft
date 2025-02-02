@@ -76,7 +76,11 @@
         "semaphore": "cpp",
         "__tree": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "any": "cpp",
+        "numeric": "cpp",
+        "shared_mutex": "cpp",
+        "__node_handle": "cpp"
     },
     "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/",
     "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/build",

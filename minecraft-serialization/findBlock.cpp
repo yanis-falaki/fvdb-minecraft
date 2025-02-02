@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <NBTParser.h>
+#include <NBTVDB.h>
 
 void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette globalPalette, int32_t xOffset, int32_t zOffset, int32_t x, int32_t y, int32_t z);
 
@@ -122,7 +123,7 @@ void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette glo
     openvdb::Int32Grid::Accessor accessor = grid->getAccessor();
      // -----------------
 
-    NBTParser::populateVDBWithSection(globalPalette, section, xOffset, zOffset, accessor);
+    NBTParser::VDB::populateVDBWithSection(globalPalette, section, xOffset, zOffset, accessor);
 
     grid->setName("ChunkExample");
     grid->setTransform(

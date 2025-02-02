@@ -5,6 +5,7 @@
 #include <zlib.h>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <openvdb/openvdb.h>
 
 #include <NBTParser.h>
@@ -23,10 +24,11 @@ int main()
     openvdb::Int32Grid::Accessor accessor = grid->getAccessor();
      // -----------------
     
-    std::string regionFolderPath = std::format("{}/data/test_world/region", PROJECT_SOURCE_DIR);
-    NBTParser::GlobalPalette globalPalette;
+    std::string regionFolderPath = std::format("{}/examples/test_world/region", PROJECT_SOURCE_DIR);
+    NBTParser::GlobalPalette globalPalette(std::format("{}/block_list.txt", PROJECT_SOURCE_DIR));
 
     NBTParser::VDB::populateVDBWithRegionFile(regionFolderPath, regionX, regionZ, *grid, globalPalette);
+    grid->pruneGrid(0);
     
     // Writing grid to file as an ordinary VDB grid.
     grid->setName("RegionExample");

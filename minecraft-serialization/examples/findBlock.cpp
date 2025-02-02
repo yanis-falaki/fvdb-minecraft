@@ -31,7 +31,7 @@ int main()
 
     // construct string to open region file
     std::stringstream filePath;
-    filePath << PROJECT_SOURCE_DIR << "/data/test_world/region/r." << regionX << "." << regionZ << ".mca"; // PROJECT_SOURCE_DIR defined in CMakeLists.txt
+    filePath << PROJECT_SOURCE_DIR << "/examples/test_world/region/r." << regionX << "." << regionZ << ".mca"; // PROJECT_SOURCE_DIR defined in CMakeLists.txt
 
     // open region file
     std::ifstream inputFile(filePath.str(), std::ios::binary);
@@ -100,7 +100,7 @@ int main()
     int32_t k_coords[NBTParser::SECTION_SIZE*sectionList.size()];
     int32_t palette_index[NBTParser::SECTION_SIZE*sectionList.size()];
 
-    NBTParser::GlobalPalette globalPalette;
+    NBTParser::GlobalPalette globalPalette(std::format("{}/block_list.txt", PROJECT_SOURCE_DIR));
 
     NBTParser::sectionListToCoords(globalPalette, sectionList, i_coords, j_coords, k_coords, palette_index);
 

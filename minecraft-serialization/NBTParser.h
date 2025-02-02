@@ -51,8 +51,7 @@ struct GlobalPalette {
     std::vector<std::string> indexToStringVector;
     std::unordered_map<std::string, uint32_t> nameToIndexMap;
 
-    GlobalPalette() {
-        std::string block_list_file_path = std::format("{}/block_list.txt", PROJECT_SOURCE_DIR);
+    GlobalPalette(std::string block_list_file_path) {
         std::ifstream infile(block_list_file_path);
         int i = 0;
         for (std::string line; std::getline(infile, line); ) 

@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 find_package(ZLIB REQUIRED)
 
 # Add executables for findBlock
-add_executable(findBlock findBlock.cpp)  # Second executable
-add_executable(serializeRegion serializeRegion.cpp)  # Second executable
+add_executable(findBlock examples/findBlock.cpp)  # Second executable
+add_executable(serializeRegion examples/serializeRegion.cpp)  # Second executable
 
 target_include_directories(findBlock PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

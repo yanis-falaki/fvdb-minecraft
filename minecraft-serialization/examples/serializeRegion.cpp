@@ -24,10 +24,10 @@ int main()
     openvdb::Int32Grid::Accessor accessor = grid->getAccessor();
      // -----------------
     
-    std::string regionFolderPath = std::format("{}/examples/test_world/region", PROJECT_SOURCE_DIR);
+    std::string regionFilePath = std::format("{}/examples/test_world/region/r.{}.{}.mca", PROJECT_SOURCE_DIR, regionX, regionZ);
     NBTParser::GlobalPalette globalPalette(std::format("{}/block_list.txt", PROJECT_SOURCE_DIR));
 
-    NBTParser::VDB::populateVDBWithRegionFile(regionFolderPath, regionX, regionZ, *grid, globalPalette);
+    NBTParser::VDB::populateVDBWithRegionFile(regionFilePath, regionX, regionZ, accessor, globalPalette);
     grid->pruneGrid(0);
     
     // Writing grid to file as an ordinary VDB grid.

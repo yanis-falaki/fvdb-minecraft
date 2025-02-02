@@ -34,9 +34,7 @@ void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& s
 }
 
 // --------------------------> populateVDBWithRegionFile <--------------------------
-void populateVDBWithRegionFile(std::string regionFolderPath, int32_t regionX, int32_t regionZ, openvdb::Int32Grid& grid, GlobalPalette& globalPalette) {
-
-    std::string regionFilePath = std::format("{}/r.{}.{}.mca", regionFolderPath, regionX, regionZ);
+void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int32_t regionZ, openvdb::Int32Grid::Accessor& accessor, GlobalPalette& globalPalette) {
 
     std::ifstream inputFile(regionFilePath, std::ios::binary);
 
@@ -51,10 +49,6 @@ void populateVDBWithRegionFile(std::string regionFolderPath, int32_t regionX, in
     uint32_t chunkSize;
     int32_t chunkX;
     int32_t chunkZ;
-
-    // -----------------
-    openvdb::Int32Grid::Accessor accessor = grid.getAccessor();
-     // -----------------
 
     for (uint32_t i = 0; i < NBTParser::MAX_CHUNKS_IN_REGION; ++i) {
         uint32_t chunk_table_offset = i << 2; // every entry is 4 bytes

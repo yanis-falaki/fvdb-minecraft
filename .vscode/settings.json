@@ -80,8 +80,10 @@
         "any": "cpp",
         "numeric": "cpp",
         "shared_mutex": "cpp",
-        "__node_handle": "cpp"
+        "__node_handle": "cpp",
+        "__config": "cpp",
+        "filesystem": "cpp"
     },
-    "cmake.sourceDirectory": "${workspaceFolder}/minecraft-serialization/",
+    "cmake.sourceDirectory": ["${workspaceFolder}/minecraft-serialization/", "${workspaceFolder}/data/processing"],
     "cmake.buildDirectory": "${workspaceFolder}/minecraft-serialization/build",
 }

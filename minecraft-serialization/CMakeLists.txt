@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(NBTExplorer)
+project(NBTParser)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -8,9 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Find zlib
 find_package(ZLIB REQUIRED)
 
-# Add executables for findBlock
-add_executable(findBlock examples/findBlock.cpp)  # Second executable
-add_executable(serializeRegion examples/serializeRegion.cpp)  # Second executable
+# Add executables
+add_executable(findBlock examples/findBlock.cpp) 
+add_executable(serializeRegion examples/serializeRegion.cpp)
 
 target_include_directories(findBlock PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

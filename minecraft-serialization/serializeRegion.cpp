@@ -7,6 +7,8 @@
 #include <cstring>
 #include <openvdb/openvdb.h>
 #include <NBTParser.h>
+#include <nanovdb/tools/CreateNanoGrid.h> // converter from OpenVDB to NanoVDB (includes NanoVDB.h and GridManager.h)
+#include <nanovdb/util/IO.h>
 
 constexpr uint32_t MAX_CHUNKS = 1024;
 
@@ -102,19 +104,20 @@ int main()
 
         NBTParser::populateVDBWithSectionList(globalPalette, sectionList, accessor);
     }
+    inputFile.close();
 
+    // Writing grid to file as an ordinary VDB grid.
     grid->setName("RegionExample");
-
     openvdb::io::File file("region.vdb");
-
-    // Add the grid pointer to a container.
     openvdb::GridPtrVec grids;
     grids.push_back(grid);
-
     file.write(grids);
     file.close();
 
-    inputFile.close();
+    // Writing grid to file as a NanoVDB grid.
+    auto handle = nanovdb::tools::createNanoGrid(*grid);
+    nanovdb::io::writeGrid("region.nvdb", handle);
+
     return 0;
 }
 

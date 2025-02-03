@@ -23,18 +23,19 @@ void populateVDBWithSection(GlobalPalette& globalPalette, SectionPack& section, 
 
 // --------------------------> populateVDBWithSectionList <--------------------------
 
-void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& sectionList, auto& accessor) {
+void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& sectionList, auto& accessor, int32_t minimumSectionY = -999) {
     InsertSectionInVDBStrategy strategy;
     uint32_t numSections = sectionList.size();
 
     // w << 12 = w*SECTION_SIZE
     for (uint32_t w = 0; w < numSections; ++w) {
+        if (sectionList[w].y < minimumSectionY) continue;
         commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, accessor);
     }
 }
 
 // --------------------------> populateVDBWithRegionFile <--------------------------
-void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int32_t regionZ, openvdb::Int32Grid::Accessor& accessor, GlobalPalette& globalPalette) {
+void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int32_t regionZ, openvdb::Int32Grid::Accessor& accessor, GlobalPalette& globalPalette, int32_t minimumSectionY) {
 
     std::ifstream inputFile(regionFilePath, std::ios::binary);
 
@@ -90,7 +91,7 @@ void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int3
 
         if (sectionList.size() <= 0) continue; // If empty chunk
 
-        NBTParser::VDB::populateVDBWithSectionList(globalPalette, sectionList, accessor);
+        NBTParser::VDB::populateVDBWithSectionList(globalPalette, sectionList, accessor, minimumSectionY);
     }
 
     inputFile.close();

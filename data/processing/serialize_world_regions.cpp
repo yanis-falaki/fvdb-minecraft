@@ -54,7 +54,7 @@ void serializeWorldInSeries(NBTParser::GlobalPalette& globalPalette, std::string
         grid->setName(worldRegionName);
 
         //Writing grid to file as a NanoVDB grid.
-        auto handle = nanovdb::tools::createNanoGrid(*grid);
-        nanovdb::io::writeGrid(std::format("{}/data/training_data/regions/{}.nvdb", ROOT_DIR, worldRegionName), handle);
+        const auto handle = nanovdb::tools::createNanoGrid(*grid);
+        nanovdb::io::writeGrid(std::format("{}/data/training_data/regions/{}.nvdb", ROOT_DIR, worldRegionName), handle, nanovdb::io::Codec::BLOSC);
     }
 }

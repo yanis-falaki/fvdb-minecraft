@@ -1,5 +1,7 @@
-#include <cstring>
+#ifndef NBTVDB
+#define NBTVDB
 
+#include <cstring>
 #include <NBTParser.h>
 #include <openvdb/openvdb.h>
 
@@ -99,3 +101,5 @@ void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int3
 
 
 }
+
+#endif

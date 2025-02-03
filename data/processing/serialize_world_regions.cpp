@@ -34,6 +34,8 @@ int main() {
         NBTParser::VDB::populateVDBWithRegionFile(dir_entry.path(), 0, 0, accessor, globalPalette);
         grid->pruneGrid(0);
 
+        if (grid->activeVoxelCount() <= 0) continue; // empty region
+
         std::string worldRegionName = std::format("1.{}.{}", regionX, regionZ);
         grid->setName(worldRegionName);
 

@@ -14,8 +14,6 @@
 #include <nanovdb/tools/CreateNanoGrid.h>
 #include <nanovdb/util/IO.h>
 
-inline void parseRegionCoordinatesFromString(const std::string& filename, int32_t& regionX, int32_t& regionZ);
-
 int main() {
     openvdb::initialize();
     NBTParser::GlobalPalette globalPalette(std::format("{}/minecraft-serialization/block_list.txt", ROOT_DIR));
@@ -30,42 +28,17 @@ int main() {
 
         int32_t regionX;
         int32_t regionZ;
-        parseRegionCoordinatesFromString(dir_entry.path().filename(), regionX, regionZ);
+        NBTParser::helpers::parseRegionCoordinatesFromString(dir_entry.path().filename(), regionX, regionZ);
 
+        // set regionX and regionZ parameter to 0, 0 since we're only serializing a single region.
         NBTParser::VDB::populateVDBWithRegionFile(dir_entry.path(), 0, 0, accessor, globalPalette);
         grid->pruneGrid(0);
 
         std::string worldRegionName = std::format("1.{}.{}", regionX, regionZ);
         grid->setName(worldRegionName);
 
-        /*
-        // Writing grid to file as an ordinary VDB grid.
-        openvdb::io::File file(std::format("{}/data/training_data/regions/vdb/{}.vdb", ROOT_DIR, worldRegionName));
-        openvdb::GridPtrVec grids;
-        grids.push_back(grid);
-        file.write(grids);
-        file.close();
-        */
-
         //Writing grid to file as a NanoVDB grid.
         auto handle = nanovdb::tools::createNanoGrid(*grid);
         nanovdb::io::writeGrid(std::format("{}/data/training_data/regions/{}.nvdb", ROOT_DIR, worldRegionName), handle);
     }
-}
-
-inline void parseRegionCoordinatesFromString(const std::string& filename, int32_t& regionX, int32_t& regionZ) {
-    // Navigate past the 'r.' prefix
-    size_t startPos = 2;
-    
-    // Delineate coordinate boundaries via dot positions
-    size_t firstDot = filename.find('.', startPos);
-    size_t secondDot = filename.find('.', firstDot + 1);
-    
-    // Extract the coordinate substrings
-    std::string xStr = filename.substr(startPos, firstDot - startPos);
-    std::string zStr = filename.substr(firstDot + 1, secondDot - firstDot - 1);
-    
-    // Populate the reference parameters
-    regionX = std::stoi(xStr);
-    regionZ = std::stoi(zStr);
 }

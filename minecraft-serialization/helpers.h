@@ -191,6 +191,25 @@ inline void regionChunkIndexToLocalChunkCoords(uint32_t index, int32_t& destChun
     return;
 }
 
+// --------------------------> parseRegionCoordinatesFromString <--------------------------
+
+inline void parseRegionCoordinatesFromString(const std::string& filename, int32_t& regionX, int32_t& regionZ) {
+    // Navigate past the 'r.' prefix
+    size_t startPos = 2;
+    
+    // Delineate coordinate boundaries via dot positions
+    size_t firstDot = filename.find('.', startPos);
+    size_t secondDot = filename.find('.', firstDot + 1);
+    
+    // Extract the coordinate substrings
+    std::string xStr = filename.substr(startPos, firstDot - startPos);
+    std::string zStr = filename.substr(firstDot + 1, secondDot - firstDot - 1);
+    
+    // Populate the reference parameters
+    regionX = std::stoi(xStr);
+    regionZ = std::stoi(zStr);
+}
+
 } // namespace helpers
 
 #endif // ifndef HELPERS

@@ -15,7 +15,7 @@
 #include <nanovdb/tools/CreateNanoGrid.h>
 #include <nanovdb/util/IO.h>
 
-void serializeWorldInSeries(NBTParser::GlobalPalette& globalPalette, std::string worldName, int32_t minimumSectionY);
+void serializeWorldRegionsInSeries(NBTParser::GlobalPalette& globalPalette, std::string worldName, int32_t minimumSectionY);
 
 int main() {
     openvdb::initialize();
@@ -24,12 +24,12 @@ int main() {
     const std::filesystem::path worlds{std::format("{}/data/raw_data/custom_saves/", ROOT_DIR)};
 
     for (auto const& world : std::filesystem::directory_iterator{worlds}) {
-        serializeWorldInSeries(globalPalette, world.path().filename(), 0); // minimumSectionY is zero. (World also exists in negative coodinates but I'm only interested in the surface)
+        serializeWorldRegionsInSeries(globalPalette, world.path().filename(), 0); // minimumSectionY is zero. (World also exists in negative coodinates but I'm only interested in the surface)
     }
 }
 
 // TODO make multithreaded
-void serializeWorldInSeries(NBTParser::GlobalPalette& globalPalette, std::string worldName, int32_t minimumSectionY) {
+void serializeWorldRegionsInSeries(NBTParser::GlobalPalette& globalPalette, std::string worldName, int32_t minimumSectionY) {
 
     const std::filesystem::path regions{std::format("{}/data/raw_data/custom_saves/{}/region", ROOT_DIR, worldName)};
 

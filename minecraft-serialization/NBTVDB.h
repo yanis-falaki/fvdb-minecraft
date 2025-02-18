@@ -25,15 +25,25 @@ void populateVDBWithSection(GlobalPalette& globalPalette, SectionPack& section, 
 
 // --------------------------> populateVDBWithSectionList <--------------------------
 
-void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& sectionList, auto& accessor, int32_t minimumSectionY = -999) {
+void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& sectionList, auto& accessor, int32_t minimumSectionY = -999, bool noOffset = false) {
     InsertSectionInVDBStrategy strategy;
     uint32_t numSections = sectionList.size();
 
-    // w << 12 = w*SECTION_SIZE
-    for (uint32_t w = 0; w < numSections; ++w) {
-        if (sectionList[w].y < minimumSectionY) continue;
-        commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, accessor);
+    if (!noOffset){
+        // w << 12 = w*SECTION_SIZE
+        for (uint32_t w = 0; w < numSections; ++w) {
+            if (sectionList[w].y < minimumSectionY) continue;
+            commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, accessor);
+        }
     }
+    else{
+        // w << 12 = w*SECTION_SIZE
+        for (uint32_t w = 0; w < numSections; ++w) {
+            if (sectionList[w].y < minimumSectionY) continue;
+            commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], 0, 0, accessor);
+        }
+    }
+
 }
 
 // --------------------------> populateVDBWithRegionFile <--------------------------

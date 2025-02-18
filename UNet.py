@@ -81,8 +81,8 @@ class SparseUNet(torch.nn.Module):
         self.relu = fvdb.nn.ReLU(inplace=True)
 
     def forward(self, x):
+        # ogs are the tensors right before maxpooling
         og1, x = self.downSampleBlock1(x)
-
         og2, x = self.downSampleBlock2(x)
         og3, x = self.downSampleBlock3(x)
         og4, x = self.downSampleBlock4(x)
@@ -99,6 +99,7 @@ class SparseUNet(torch.nn.Module):
 
         x = self.preFinalConv(x)
         x = self.preFinalNorm(x)
-        x = self.finalConv(x)
+        x = self.relu(x)
+        x = self.finalConv(x) # 1060 logits
 
         return x

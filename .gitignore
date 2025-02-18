@@ -1,3 +1,5 @@
 **/session.lock
 
 **/build
+
+__pycache__/

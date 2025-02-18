@@ -16,6 +16,8 @@
 #include <nanovdb/util/IO.h>
 
 void serializeRegionAsChunks(NBTParser::GlobalPalette& globalPalette, std::string worldName, int32_t minimumSectionY);
+void serializeChunks(auto& inputFile, NBTParser::GlobalPalette& globalPalette, std::string worldName, int32_t minimumSectionY,
+    int32_t regionX, int32_t regionZ, openvdb::Int32Grid::Ptr grid, openvdb::Int32Grid::Accessor accessor);
 
 int main() {
     openvdb::initialize();

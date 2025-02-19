@@ -59,3 +59,15 @@ FVDB is required which can be gotten from the same github repo in the feature/fv
 - **Chunk**: A 16x16 block region of a minecraft world. [Chunk Data Format](https://minecraft.fandom.com/wiki/Chunk_format)
 - **Region**: A 32x32 chunk or 512x512 region of a minecraft world. Minecraft stores worlds as seperate region files. [Region Data Format](https://minecraft.fandom.com/wiki/Region_file_format)
 - **Schematic**: Schematics are an unofficial (but widely used) datatype which is used to import specific structures into worlds. (Such as a house, build, town, sculpture, etc) [Schematic Data Format](https://minecraft.fandom.com/wiki/Schematic_file_format)
+
+# TODO
+- [ ] Have parser and nvdb serializer library support all Minecraft world/structure data  
+    - [x] Add parser support for post-1.16 worlds.  
+    - [ ] Add parser support for pre-1.16 worlds (unpadded block data list).  
+    - [ ] Add parser support for schematics.
+    - [ ] Add parser support for litematics.
+- [x] Create example notebook training with serialized Minecraft data.  
+- [ ] Write nvdb visualizer with support for textures.
+- [ ] Write nvdb → Minecraft world serializer.
+- [ ] Scrape worlds and schematics
+- [ ] Create generative model

@@ -55,6 +55,7 @@ In order to use the minecraft-serialization library and data/processing OpenVDB 
 FVDB is required which can be gotten from the same github repo in the feature/fvdb branch. Within the conda environment created during the fvdb setup, pip install IPython and matplotlib.
 
 # Definitions 
-- **Chunk**: A 16x16 block region of a minecraft world.
-- **Region**: A 32x32 chunk or 512x512 region of a minecraft world. Minecraft stores worlds as seperate region files.
-- **Schematic**: Schematics are an unofficial (but widely used) datatype which is used to import specific structures into worlds. (Such as a house, build, town, sculpture, etc)
+- **Named Binary Tag (NBT)**: Minecraft's custom data format for a variety of uses such as world data. [NBT Data Format](https://minecraft.fandom.com/wiki/NBT_format)
+- **Chunk**: A 16x16 block region of a minecraft world. [Chunk Data Format](https://minecraft.fandom.com/wiki/Chunk_format)
+- **Region**: A 32x32 chunk or 512x512 region of a minecraft world. Minecraft stores worlds as seperate region files. [Region Data Format](https://minecraft.fandom.com/wiki/Region_file_format)
+- **Schematic**: Schematics are an unofficial (but widely used) datatype which is used to import specific structures into worlds. (Such as a house, build, town, sculpture, etc) [Schematic Data Format](https://minecraft.fandom.com/wiki/Schematic_file_format)

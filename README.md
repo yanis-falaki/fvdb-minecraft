@@ -62,7 +62,7 @@ FVDB is required which can be gotten from the same github repo in the feature/fv
 
 # TODO
 - [x] Create NBT Parser.
-- [ ] Have nvdb parser/serializer support all Minecraft world/structure data. They use different entry names or content.  
+- [ ] Have parser/serializer support all Minecraft world/structure data. They use different entry names or content.  
     - [x] Add support for post-1.16 worlds.  
     - [ ] Add support for pre-1.16 worlds (unpadded block data list).  
     - [ ] Add support for schematics.

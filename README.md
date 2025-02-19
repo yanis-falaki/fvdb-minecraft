@@ -61,13 +61,14 @@ FVDB is required which can be gotten from the same github repo in the feature/fv
 - **Schematic**: Schematics are an unofficial (but widely used) datatype which is used to import specific structures into worlds. (Such as a house, build, town, sculpture, etc) [Schematic Data Format](https://minecraft.fandom.com/wiki/Schematic_file_format)
 
 # TODO
-- [ ] Have parser and nvdb serializer library support all Minecraft world/structure data  
-    - [x] Add parser support for post-1.16 worlds.  
-    - [ ] Add parser support for pre-1.16 worlds (unpadded block data list).  
-    - [ ] Add parser support for schematics.
-    - [ ] Add parser support for litematics.
+- [x] Create NBT Parser.
+- [ ] Have nvdb parser/serializer support all Minecraft world/structure data. They use different entry names or content.  
+    - [x] Add support for post-1.16 worlds.  
+    - [ ] Add support for pre-1.16 worlds (unpadded block data list).  
+    - [ ] Add support for schematics.
+    - [ ] Add support for litematics.
 - [x] Create example notebook training with serialized Minecraft data.  
 - [ ] Write nvdb visualizer with support for textures.
 - [ ] Write nvdb → Minecraft world serializer.
 - [ ] Scrape worlds and schematics
-- [ ] Create generative model
+- [ ] Create diffusion model

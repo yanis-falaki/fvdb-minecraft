@@ -1,15 +1,15 @@
-# fvdb-minecraft
+# Background
 
 ## What's the goal of this repo
 The goal of this repo is to perform deep learning using minecraft data, consisting of:
 
 1. Game generated Worlds, Chunks & Regions
-2. Custom Maps/Worlds
+2. User generated Maps/Worlds
 3. Minecraft Schematics
 
 The reason for which is that Minecraft UGC seems to be an overlooked data source, which could be benificial to the development of large-scale 3D worlds.
 
-There are tens to hundreds of thousands of towns and cities that users have built and released publicly for anyone to use. It would seem plausible that using this data we can train generative model to build novel worlds.
+There are tens to hundreds of thousands of towns and cities that users have built and released publicly for anyone to use. It would seem plausible that using this data we can train a generative model to build novel worlds.
 
 ## What does this repo currently include?
 The main contribution of this repo thus far is an extremely fast (and only existing) implementation of a minecraft world/region/chunk to nvdb serializer. The fast parser itself is also usable as a standalone library, it doesn't necessarily have to serialize to nvdb files.
@@ -36,3 +36,17 @@ The secondary part is an example of using a SparseUNet built with fvdb in order 
  * [test.ipynb](./test.ipynb) Notebook which trains a SparseUNet to predict block type per voxel given grid occupancy.
  * [UNet.py](./UNet.py) Contains the implementation for SparseUNet.
  * [utils.py](./utils.py) Contains some utility/helper functions for test.ipynb
+
+# Dependencies
+TODO: Create streamlined procedure.
+
+## Data processing
+In order to use the minecraft-serialization library and data/processing OpenVDB and NanoVDB is required. It can be gotten from its [Github repo](https://github.com/AcademySoftwareFoundation/openvdb.git), and should be built with:
+- OPENVDB_BUILD_CORE
+- OPENVDB_BUILD_NANOVDB
+- USE_NANOVDB
+- NANOVDB_USE_CUDA
+- USE_BLOSC
+
+## UNet Example
+FVDB is required which can be gotten from the same github repo in the feature/fvdb branch. Within the conda environment created during the fvdb setup, pip install IPython and matplotlib.

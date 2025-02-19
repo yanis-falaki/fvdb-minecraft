@@ -11,6 +11,9 @@ The reason for which is that Minecraft UGC seems to be an overlooked data source
 
 There are tens to hundreds of thousands of towns and cities that users have built and released publicly for anyone to use. It would seem plausible that using this data we can train a generative model to build novel worlds.
 
+Example of a user built city:
+![Example City World](imgs/city.png)
+
 ## What does this repo currently include?
 The main contribution of this repo thus far is an extremely fast (and only existing) implementation of a minecraft world/region/chunk to nvdb serializer. The fast parser itself is also usable as a standalone library, it doesn't necessarily have to serialize to nvdb files.
 
@@ -50,3 +53,8 @@ In order to use the minecraft-serialization library and data/processing OpenVDB 
 
 ## UNet Example
 FVDB is required which can be gotten from the same github repo in the feature/fvdb branch. Within the conda environment created during the fvdb setup, pip install IPython and matplotlib.
+
+# Definitions 
+- **Chunk**: A 16x16 block region of a minecraft world.
+- **Region**: A 32x32 chunk or 512x512 region of a minecraft world. Minecraft stores worlds as seperate region files.
+- **Schematic**: Schematics are an unofficial (but widely used) datatype which is used to import specific structures into worlds. (Such as a house, build, town, sculpture, etc)

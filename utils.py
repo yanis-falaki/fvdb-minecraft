@@ -14,9 +14,9 @@ def setup_plots():
     ax2.set_ylabel('Accuracy')
     ax2.set_title('Training Accuracy')
 
-    return ax1, ax2, loss_line, acc_line
+    return fig, ax1, ax2, loss_line, acc_line
 
-def update_plots(losses, accuracies, iterations, ax1, ax2, loss_line, acc_line):
+def update_plots(losses, accuracies, iterations, fig, ax1, ax2, loss_line, acc_line):
     # Update both line data
     loss_line.set_xdata(iterations)
     loss_line.set_ydata(losses)
@@ -31,4 +31,4 @@ def update_plots(losses, accuracies, iterations, ax1, ax2, loss_line, acc_line):
     
     # Redraw the plot
     display.clear_output(wait=True)
-    display.display(plt.gcf())
+    display.display(fig)

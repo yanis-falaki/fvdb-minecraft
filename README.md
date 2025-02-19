@@ -33,7 +33,7 @@ The secondary part is an example of using a SparseUNet built with fvdb in order 
     * [helpers.h](./minecraft-serialization/helpers.h) Helper functions used within the library
     * [NBTParser.h](./minecraft-serialization/NBTParser.h) The main Named Binary Tag (NBT) parsing logic. NBTs are minecraft's custom data format for world data.
     * [NBTVDB.h](./minecraft-serialization/NBTVDB.h) An extension to NBTParser.h which is used to serialize worlds into OpenVDB grids.
- * [test.ipynb](./test.ipynb) Notebook which trains a SparseUNet to predict block type per voxel given grid occupancy.
+ * [example.ipynb](./example.ipynb) Notebook which trains a SparseUNet to predict block type per voxel given grid occupancy.
  * [UNet.py](./UNet.py) Contains the implementation for SparseUNet.
  * [utils.py](./utils.py) Contains some utility/helper functions for test.ipynb
 

@@ -47,7 +47,7 @@ void populateVDBWithSectionList(GlobalPalette& globalPalette, SectionListPack& s
 }
 
 // --------------------------> populateVDBWithRegionFile <--------------------------
-void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int32_t regionZ, openvdb::Int32Grid::Accessor& accessor, GlobalPalette& globalPalette, int32_t minimumSectionY) {
+void populateVDBWithRegionFile(std::string regionFilePath, int32_t regionX, int32_t regionZ, openvdb::Int32Grid::Accessor& accessor, GlobalPalette& globalPalette, int32_t minimumSectionY = -999) {
 
     std::ifstream inputFile(regionFilePath, std::ios::binary);
 

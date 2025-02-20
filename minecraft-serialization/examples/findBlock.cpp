@@ -12,9 +12,9 @@ void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette glo
 
 int main()
 {
-    int32_t x = 110;
-    int32_t y = 62;
-    int32_t z = 250;
+    int32_t x = 131;
+    int32_t y = 40;
+    int32_t z = 237;
 
     // Chunk to look for
     int chunkX = x >> 4;

@@ -1,13 +1,17 @@
 # Background
 
 ## What's the goal of this repo
-The goal of this repo is to perform deep learning using minecraft data, consisting of:
+The goal of this repo is to perform deep learning on minecraft data using fVDB.
+
+[fVDB](https://github.com/AcademySoftwareFoundation/openvdb/tree/feature/fvdb/fvdb) is a PyTorch extension which allows for efficient deep learning on sparse volumetric data (Encoded as NanoVDBs).
+
+Minecraft data consists of:
 
 1. Game generated Worlds, Chunks & Regions
 2. User generated Maps/Worlds
 3. Minecraft Schematics
 
-The reason for which is that Minecraft UGC seems to be an overlooked data source, which could be benificial to the development of large-scale 3D worlds.
+The motivation for this repo is that Minecraft UGC seems to be an overlooked data source, which could be benificial to the development of large-scale 3D worlds.
 
 There are tens to hundreds of thousands of towns and cities that users have built and released publicly for anyone to use. It would seem plausible that using this data we can train a generative model to build novel worlds.
 
@@ -15,7 +19,7 @@ Example of a user built city:
 ![Example City World](imgs/city.png)
 
 ## What does this repo currently include?
-The main contribution of this repo thus far is an extremely fast (and only existing) implementation of a minecraft world/region/chunk to nvdb serializer. The fast parser itself is also usable as a standalone library, it doesn't necessarily have to serialize to nvdb files.
+The main contribution of this repo thu>s far is an extremely fast (and only existing) implementation of a minecraft world/region/chunk to nvdb serializer. The fast parser itself is also usable as a standalone library, it doesn't necessarily have to serialize to nvdb files.
 
 The secondary part is an example of using a SparseUNet built with fvdb in order to predict what block each voxel in an nvdb grid belongs to, given occupancy information.
 

@@ -35,7 +35,6 @@ The secondary part is an example of using a SparseUNet built with fvdb in order 
         * [chunks/](./data/training_data/chunks/) Chunks saved as nvdbs. Name format: world.globalChunkX.globalChunkZ.nvdb
         * [regions/](./data/training_data/regions/) Regions saved as nvdbs. Name format: world.regionX.regionZ.nvdb
  * [minecraft-serialization/](./minecraft-serialization) Contains a library for parsing and serializing minecraft worlds.
-    * [archive/](./minecraft-serialization/archive/) Old attempts at serialization that are being kept for reference. Using prebuilt libraries that were very slow.
     * [examples/](./minecraft-serialization/examples/) Some example usages of NBTParser.h
     * [helpers.h](./minecraft-serialization/helpers.h) Helper functions used within the library
     * [NBTParser.h](./minecraft-serialization/NBTParser.h) The main Named Binary Tag (NBT) parsing logic. NBTs are minecraft's custom data format for world data.

@@ -79,6 +79,6 @@ FVDB is required which can be gotten from the same github repo in the feature/fv
 - [x] Create example notebook training with serialized Minecraft data.  
 - [x] Write nvdb visualizer.
     - [ ] Add support for minecraft textures rather than outputting solid colors.
-- [ ] Write nvdb → Minecraft world serializer.
+- [ ] Write nvdb → Minecraft world deserializer.
 - [ ] Scrape worlds and schematics
 - [ ] Create diffusion model

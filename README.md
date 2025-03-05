@@ -19,9 +19,11 @@ Example of a user built city:
 ![Example City World](imgs/city.png)
 
 ## What does this repo currently include?
-The main contribution of this repo thu>s far is an extremely fast (and only existing) implementation of a minecraft world/region/chunk to nvdb serializer. The fast parser itself is also usable as a standalone library, it doesn't necessarily have to serialize to nvdb files.
+1. The main contribution of this repo thus far is an extremely fast (and only existing) implementation of a minecraft world/region/chunk to nvdb serializer. The fast parser itself is also usable as a standalone library, it doesn't necessarily have to serialize to nvdb files.
 
-The secondary part is an example of using a SparseUNet built with fvdb in order to predict what block each voxel in an nvdb grid belongs to, given occupancy information.
+2. An interactive visualizer which allows for viewing minecraft blocks encoded in nanovdbs. (Currently only displays solid colors)
+
+3. An example of using a SparseUNet built with fvdb in order to predict what block each voxel in an nvdb grid belongs to, given occupancy information.
 
 ## Directory Structure
  * [data/](./data)
@@ -39,6 +41,7 @@ The secondary part is an example of using a SparseUNet built with fvdb in order 
     * [helpers.h](./minecraft-serialization/helpers.h) Helper functions used within the library
     * [NBTParser.h](./minecraft-serialization/NBTParser.h) The main Named Binary Tag (NBT) parsing logic. NBTs are minecraft's custom data format for world data.
     * [NBTVDB.h](./minecraft-serialization/NBTVDB.h) An extension to NBTParser.h which is used to serialize worlds into OpenVDB grids.
+ * [visualizer/](./visualizer) Contains the build files and source code required to compile an interactive visualizer for nanovdbs.
  * [example.ipynb](./example.ipynb) Notebook which trains a SparseUNet to predict block type per voxel given grid occupancy.
  * [UNet.py](./UNet.py) Contains the implementation for SparseUNet.
  * [utils.py](./utils.py) Contains some utility/helper functions for test.ipynb
@@ -53,6 +56,9 @@ In order to use the minecraft-serialization library and data/processing OpenVDB 
 - USE_NANOVDB
 - NANOVDB_USE_CUDA
 - USE_BLOSC
+
+## Visualizer
+Requires glfw, opengl, nanovdb built with cuda and blosc.
 
 ## UNet Example
 FVDB is required which can be gotten from the same github repo in the feature/fvdb branch. Within the conda environment created during the fvdb setup, pip install IPython and matplotlib.
@@ -71,7 +77,8 @@ FVDB is required which can be gotten from the same github repo in the feature/fv
     - [ ] Add support for schematics.
     - [ ] Add support for litematics.
 - [x] Create example notebook training with serialized Minecraft data.  
-- [ ] Write nvdb visualizer with support for textures.
+- [x] Write nvdb visualizer.
+    - [ ] Add support for minecraft textures rather than outputting solid colors.
 - [ ] Write nvdb → Minecraft world serializer.
 - [ ] Scrape worlds and schematics
 - [ ] Create diffusion model

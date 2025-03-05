@@ -20,6 +20,7 @@ inline __hostdev__ bool firstActiveCustom(RayT& ray, AccT& acc, nanovdb::math::C
         return false;// missed or undefined bbox
     }
     static const float Delta = 0.001f;// forward step-size along the ray to avoid getting stuck
+    ray.setMinTime(ray.t0() - 0.0001f);// step back a small delta to avoid missing a first voxel at the edge of the bbox
     t = ray.t0();// initiate time
     ijk = RoundDown<nanovdb::math::Coord>(ray.start()); // first voxel inside bbox
     for (nanovdb::math::HDDA<RayT, nanovdb::math::Coord> hdda(ray, acc.getDim(ijk, ray)); !acc.isActive(ijk); hdda.update(ray, acc.getDim(ijk, ray))) {

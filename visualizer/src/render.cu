@@ -11,8 +11,6 @@
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
 #include <cuda_gl_interop.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb/stb_image_write.h"
 
 #include "generateImage.cuh"
 
@@ -164,6 +162,19 @@ std::tuple<GLFWwindow*, GLuint, GLuint, GLuint, GLuint> GLInit(WindowUserData* w
         glfwTerminate();
         return {nullptr, NULL, NULL, NULL, NULL};
     }
+
+
+    // Check that opengl is using nvidia gpu for cuda interop (May use integrated graphics instead by default)
+    const char* renderer = (const char*)glGetString(GL_RENDERER);
+    const char* vendor = (const char*)glGetString(GL_VENDOR);
+
+    if (strstr(vendor, "NVIDIA") == NULL) {
+        std::cerr << "Error: OpenGL Not using NVIDIA GPU. Run with '__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia'. (linux)" << std::endl;
+        std::cout << "Renderer: " << renderer << std::endl << "Vendor: " << vendor << std::endl;
+        glfwTerminate();
+        return {nullptr, NULL, NULL, NULL, NULL};
+    }
+
     glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
     glfwSetCursorPosCallback(window, mouseCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

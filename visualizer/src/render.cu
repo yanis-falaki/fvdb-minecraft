@@ -32,7 +32,7 @@ struct CameraData {
 
     // intrinsics
     float mFOV = 90.0f;
-    float mFocalLength = 1.0f;
+    float mFocalLength = 1;
     float mHlfViewPlaneWidth;
     float mFarClip = 500.0f;
 

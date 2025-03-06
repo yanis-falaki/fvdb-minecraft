@@ -84,5 +84,5 @@
         "__config": "cpp",
         "filesystem": "cpp"
     },
-    "cmake.sourceDirectory": ["${workspaceFolder}/minecraft-serialization/", "${workspaceFolder}/data/processing"],
+    "cmake.sourceDirectory": ["${workspaceFolder}/minecraft-serialization/", "${workspaceFolder}/data/processing", "${workspaceFolder}/visualizer"],
 }

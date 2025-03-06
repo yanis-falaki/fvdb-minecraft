@@ -50,7 +50,7 @@ struct CameraData {
         mRight = Vec3f{0, 1, 0}.cross(mDirection).normalize();
         mUp = mDirection.cross(mRight);
 
-        mYaw = std::atan2(mDirection[0], mDirection[2]) * 180.0f / nanovdb::math::pi<float>();
+        mYaw = std::atan2(mDirection[2], mDirection[0]) * 180.0f / nanovdb::math::pi<float>();
         mPitch = std::asin(mDirection[1]) * 180.0f / nanovdb::math::pi<float>();
     }
 
@@ -72,7 +72,7 @@ struct WindowUserData {
     CameraData* cameraData;
     float lastX = 512.0f; // used for mouseCallback
     float lastY = 512.0f; // used for mouseCallback
-    bool firstMouse = false;
+    int initalFrame = 0; // used to prevent view snapping on startup in mouseCallback
 
     WindowUserData(CameraData* pCameraData) : cameraData(pCameraData) {}
 };
@@ -312,10 +312,11 @@ void mouseCallback(GLFWwindow* window, double xPos, double yPos)
     WindowUserData* windowUserData = (WindowUserData*)glfwGetWindowUserPointer(window);
     CameraData* camera = windowUserData->cameraData;
 
-    if (windowUserData->firstMouse) {
+    // prevent orientation snapping on startup
+    if (windowUserData->initalFrame < 5) {
         windowUserData->lastX = xPos;
         windowUserData->lastY = yPos;
-        windowUserData->firstMouse = false;
+        windowUserData->initalFrame += 1;
         return;
     }
     

@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.cu": "cuda-cpp",
         "iostream": "cpp",
         "cctype": "cpp",
         "clocale": "cpp",
@@ -82,7 +83,9 @@
         "shared_mutex": "cpp",
         "__node_handle": "cpp",
         "__config": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "unordered_set": "cpp",
+        "future": "cpp"
     },
     "cmake.sourceDirectory": ["${workspaceFolder}/minecraft-serialization/", "${workspaceFolder}/data/processing", "${workspaceFolder}/visualizer"],
 }

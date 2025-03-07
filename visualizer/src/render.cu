@@ -90,8 +90,8 @@ void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
 int loadBlockTextures();
 
 int main(int argc, char* argv[]) {
-    //loadBlockTextures();
-    //return 0;
+    loadBlockTextures();
+    return 0;
 
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <path_to_nvdb_file>" << std::endl;
@@ -394,30 +394,42 @@ const char *fragmentShaderSource =
 }
 
 int loadBlockTextures() {
-    std::string blockListPath = std::format("{}/block_list.txt", PROJECT_ROOT_DIR);
-    std::string blockJsonPath = std::format("{}/textures/blocks.json", PROJECT_ROOT_DIR);
+    std::string blockListPath = std::format("{}/../minecraft-serialization/block_list.txt", PROJECT_ROOT_DIR);
 
-    std::ifstream blockJsonFile(blockJsonPath);
-    if (!blockJsonFile) {
-        std::cerr << "Error opening block json file: " << blockJsonPath << std::endl;
-        return 1; 
-    }
     std::ifstream blockList(blockListPath);          // Open the file
     if (!blockList) {
         std::cerr << "Error opening block list file: " << blockListPath << std::endl;
         return 1;
     }
 
-    json data = json::parse(blockJsonFile);
-    std::cout << data["acacia_door"]["textures"].contains("side") << std::endl;
+    //json data = json::parse(blockJsonFile);
+    //std::cout << data["acacia_door"]["textures"].contains("side") << std::endl;
     
 
-    /*std::string line;
+    std::string line;
+    std::string blockStateJsonPath;
     while (std::getline(blockList, line)) { // Read line by line
-        std::cout << line << std::endl; // Process each line
-    } */
+        // special cases:
+        if (line == "minecraft:air") continue;
+        //else if (line == "minecraft:suspicious_sand") line = "suspicious_sand_0";
+        //else if (line == "minecraft:suspicious_gravel") line = "suspicious_gravel_0";
+        else line = line.substr(10); // Ignore minecraft:
+
+
+        blockStateJsonPath = std::format("{}/assets/block_states/{}.json", PROJECT_ROOT_DIR, line);
+
+        std::ifstream blockStateJsonFile(blockStateJsonPath);
+        if (!blockStateJsonFile) {
+            std::cerr << "Error opening block json file: " << blockStateJsonPath << std::endl;
+            return 1; 
+        }
+
+        json data = json::parse(blockStateJsonFile);
+        std::cout << data.dump() << std::endl;
+
+        blockStateJsonFile.close();
+    }
 
     blockList.close();
-    blockJsonFile.close();
     return 0;
 }

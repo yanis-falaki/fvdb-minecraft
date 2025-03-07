@@ -1,6 +1,8 @@
 #include <format>
 #include <iostream>
 #include <tuple>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 #include <openvdb/openvdb.h>
 #include <nanovdb/tools/CreateNanoGrid.h>
@@ -16,6 +18,7 @@
 
 
 using Vec3f = typename nanovdb::math::Vec3f;
+using json = nlohmann::json;
 
 struct CameraData {
     uint32_t mImgHeight; // in pixels
@@ -84,8 +87,12 @@ void processInput(GLFWwindow* window);
 void mouseCallback(GLFWwindow* window, double xpos, double ypos);
 uint32_t getDefaultShaderProgram();
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height);
+int loadBlockTextures();
 
 int main(int argc, char* argv[]) {
+    //loadBlockTextures();
+    //return 0;
+
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <path_to_nvdb_file>" << std::endl;
         return 1;
@@ -384,4 +391,33 @@ const char *fragmentShaderSource =
     glDeleteShader(fragmentShader);
 
     return shaderProgram;
+}
+
+int loadBlockTextures() {
+    std::string blockListPath = std::format("{}/block_list.txt", PROJECT_ROOT_DIR);
+    std::string blockJsonPath = std::format("{}/textures/blocks.json", PROJECT_ROOT_DIR);
+
+    std::ifstream blockJsonFile(blockJsonPath);
+    if (!blockJsonFile) {
+        std::cerr << "Error opening block json file: " << blockJsonPath << std::endl;
+        return 1; 
+    }
+    std::ifstream blockList(blockListPath);          // Open the file
+    if (!blockList) {
+        std::cerr << "Error opening block list file: " << blockListPath << std::endl;
+        return 1;
+    }
+
+    json data = json::parse(blockJsonFile);
+    std::cout << data["acacia_door"]["textures"].contains("side") << std::endl;
+    
+
+    /*std::string line;
+    while (std::getline(blockList, line)) { // Read line by line
+        std::cout << line << std::endl; // Process each line
+    } */
+
+    blockList.close();
+    blockJsonFile.close();
+    return 0;
 }

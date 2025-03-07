@@ -1,1 +1,2 @@
 visualizer/include/** linguist-vendored
+visualizer/src/glad.c linguist-vendored

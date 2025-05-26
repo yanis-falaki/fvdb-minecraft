@@ -72,6 +72,11 @@ struct GlobalPalette {
         return nameToIndexMap.at(name);
     }
 
+    // Check if a name exists in the map
+    bool nameExists(const std::string& name) const {
+        return nameToIndexMap.find(name) != nameToIndexMap.end();
+    }
+
     uint32_t size() { return indexToStringVector.size(); }
 };
 
@@ -765,7 +770,12 @@ void commonSectionUnpackingLogic(UnpackSectionStrategy unpackSectionStrategy, Gl
     uint32_t localPaletteSize = section.blockStates.palleteList.size();
     uint32_t localToGlobalPaletteIndex[localPaletteSize];
     for(uint32_t i = 0; i < localPaletteSize; i++) {
-        localToGlobalPaletteIndex[i] = globalPalette[section.blockStates.palleteList[i].name];
+        if (globalPalette.nameExists(section.blockStates.palleteList[i].name))
+            localToGlobalPaletteIndex[i] = globalPalette[section.blockStates.palleteList[i].name];
+        else {
+            std::cout << section.blockStates.palleteList[i].name << " does not exist in global block list, replacing with air" << std::endl;
+            localToGlobalPaletteIndex[i] = 0;
+        }
     }
 
     // Handle unary section

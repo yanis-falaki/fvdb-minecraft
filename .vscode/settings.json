@@ -85,7 +85,9 @@
         "__config": "cpp",
         "filesystem": "cpp",
         "unordered_set": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "cfenv": "cpp",
+        "cinttypes": "cpp"
     },
     "cmake.sourceDirectory": ["${workspaceFolder}/minecraft-serialization/", "${workspaceFolder}/data/processing", "${workspaceFolder}/visualizer"],
 }

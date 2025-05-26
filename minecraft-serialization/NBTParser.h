@@ -18,6 +18,7 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <unordered_map>
 #include <fstream>
 #include <format>
+#include <block_list.h>
 
 namespace NBTParser {
 
@@ -50,6 +51,16 @@ inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalette
 struct GlobalPalette {
     std::vector<std::string> indexToStringVector;
     std::unordered_map<std::string, uint32_t> nameToIndexMap;
+
+    GlobalPalette() {
+        std::istringstream iss(BlockList::block_list);
+        int i = 0;
+        for (std::string line; std::getline(iss, line); ) {
+            nameToIndexMap[line] = i;
+            indexToStringVector.push_back(line);
+            ++i;
+        }
+    }
 
     GlobalPalette(std::string block_list_file_path) {
         std::ifstream infile(block_list_file_path);

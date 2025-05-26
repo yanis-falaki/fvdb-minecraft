@@ -19,7 +19,7 @@ void serializeWorldRegionsInSeries(NBTParser::GlobalPalette& globalPalette, std:
 
 int main() {
     openvdb::initialize();
-    NBTParser::GlobalPalette globalPalette(std::format("{}/minecraft-serialization/block_list.txt", ROOT_DIR));
+    NBTParser::GlobalPalette globalPalette;
 
     const std::filesystem::path worlds{std::format("{}/data/raw_data/custom_saves/", ROOT_DIR)};
 

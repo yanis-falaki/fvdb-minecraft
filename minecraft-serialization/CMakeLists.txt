@@ -9,15 +9,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 find_package(ZLIB REQUIRED)
 
 # Add executables
-#add_executable(findBlock examples/findBlock.cpp) 
+add_executable(findBlock examples/findBlock.cpp) 
 #add_executable(serializeRegion examples/serializeRegion.cpp)
 add_executable(parseChunk examples/parseChunk.cpp)
 
 
-#target_include_directories(findBlock PRIVATE
-#    ${CMAKE_CURRENT_SOURCE_DIR}
-#    ${ZLIB_INCLUDE_DIRS}
-#)
+target_include_directories(findBlock PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${ZLIB_INCLUDE_DIRS}
+)
 #target_include_directories(serializeRegion PRIVATE
 #    ${CMAKE_CURRENT_SOURCE_DIR}
 #    ${ZLIB_INCLUDE_DIRS}
@@ -27,9 +27,9 @@ target_include_directories(parseChunk PRIVATE
     ${ZLIB_INCLUDE_DIRS}
 )
 
-#target_link_libraries(findBlock PRIVATE 
-#    ${ZLIB_LIBRARIES}
-#)
+target_link_libraries(findBlock PRIVATE 
+    ${ZLIB_LIBRARIES}
+)
 #target_link_libraries(serializeRegion PRIVATE 
 #    ${ZLIB_LIBRARIES}
 #)
@@ -41,10 +41,10 @@ target_link_libraries(parseChunk PRIVATE
 list(APPEND CMAKE_MODULE_PATH "/usr/local/lib/cmake/OpenVDB")
 find_package(OpenVDB REQUIRED)
 #target_link_libraries(serializeRegion PRIVATE OpenVDB::openvdb)
-#target_link_libraries(findBlock PRIVATE OpenVDB::openvdb)
+target_link_libraries(findBlock PRIVATE OpenVDB::openvdb)
 #target_compile_definitions(serializeRegion PRIVATE "NANOVDB_USE_OPENVDB")
 
 # Add PROJECT_SOURCE_DIR as a preprocessor definition for all three
-#target_compile_definitions(findBlock PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(findBlock PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 #target_compile_definitions(serializeRegion PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_compile_definitions(parseChunk PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

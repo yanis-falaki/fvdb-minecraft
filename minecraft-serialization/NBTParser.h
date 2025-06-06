@@ -20,6 +20,7 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <format>
 #include <memory>
 #include <variant>
+#include <type_traits>
 
 namespace NBTParser {
 
@@ -165,8 +166,21 @@ struct TagType<Tag::Long_Array> {
     using Type = std::vector<int64_t>;
 };
 
+// --------------------------> is_NBTList_type <--------------------------
 
-// --------------------------> toStr <--------------------------
+// Primary template: defaults to false
+template <typename T>
+struct is_NBTList_type : std::false_type {};
+
+// Specialization: true for std::unique_ptr<NBTList<TAG>>
+template <Tag TAG>
+struct is_NBTList_type<std::unique_ptr<NBTList<TAG>>> : std::true_type {};
+
+// Helper variable template
+template <typename T>
+inline constexpr bool is_NBTList_type_v = is_NBTList_type<T>::value;
+
+// --------------------------> tagToStr <--------------------------
 
 // Function to convert Tag to string
 template<Tag T>
@@ -187,6 +201,7 @@ constexpr const char* tagToStr() {
     else return "Unknown";
 }
 
+// --------------------------> tagTypeToStr <--------------------------
 
 template<typename T>
 constexpr const char* tagTypeToStr() {
@@ -201,7 +216,7 @@ constexpr const char* tagTypeToStr() {
     else if constexpr (std::is_same_v<T, TagType<Tag::Byte_Array>::Type>) return "Byte_Array";
     else if constexpr (std::is_same_v<T, TagType<Tag::Int_Array>::Type>) return "Int_Array";
     else if constexpr (std::is_same_v<T, TagType<Tag::Long_Array>::Type>) return "Long_Array";
-    else if constexpr (std::is_same_v<T, TagType<Tag::List>::Type>) return "List";
+    else if constexpr (is_NBTList_type_v<T>) return "List";
     else return "Unknown";
 }
 
@@ -291,27 +306,38 @@ inline typename TagType<NumT>::Type readNum(auto&& iterator) {
    }
 }
 
-// ------------------> Parser Function Forward Declarations <------------------
-
-void parseNBTCompound(uint8_t*& iterator, NBTCompound& parent);
-TagType<Tag::List>::Type parseNBTList(uint8_t*& iterator);
-
 // --------------------------> NBTValue <--------------------------
 
 using NBTValue = std::variant<
-    TagType<Tag::Byte>::Type,       // Byte         int8_t
-    TagType<Tag::Short>::Type,      // Short        int16_t
-    TagType<Tag::Int>::Type,        // Int          int32_t
-    TagType<Tag::Long>::Type,       // Long         int64_t
-    TagType<Tag::Float>::Type,      // Float        float
-    TagType<Tag::Double>::Type,     // Double       double
-    TagType<Tag::String>::Type,     // String       std::string
-    TagType<Tag::List>::Type,
-    TagType<Tag::Compound>::Type,   // Compound     std::unique_ptr<NBTCompound>
-    TagType<Tag::Byte_Array>::Type, // Byte Array   std::vector<int8_t>
-    TagType<Tag::Int_Array>::Type,  // Int Array    std::vector<int32_t>
-    TagType<Tag::Long_Array>::Type  // Long Array   std::vector<int64_t>
+    TagType<Tag::Byte>::Type,       // int8_t
+    TagType<Tag::Short>::Type,      // int16_t
+    TagType<Tag::Int>::Type,        // int32_t
+    TagType<Tag::Long>::Type,       // int64_t
+    TagType<Tag::Float>::Type,      // float
+    TagType<Tag::Double>::Type,     // double
+    TagType<Tag::String>::Type,     // std::string
+    std::unique_ptr<NBTList<Tag::Byte>>,
+    std::unique_ptr<NBTList<Tag::Short>>,
+    std::unique_ptr<NBTList<Tag::Int>>,
+    std::unique_ptr<NBTList<Tag::Long>>,
+    std::unique_ptr<NBTList<Tag::Float>>,
+    std::unique_ptr<NBTList<Tag::Double>>,
+    std::unique_ptr<NBTList<Tag::Byte_Array>>,
+    std::unique_ptr<NBTList<Tag::String>>,
+    std::unique_ptr<NBTList<Tag::List>>,
+    std::unique_ptr<NBTList<Tag::Compound>>,
+    std::unique_ptr<NBTList<Tag::Int_Array>>,
+    std::unique_ptr<NBTList<Tag::Long_Array>>,
+    TagType<Tag::Compound>::Type,   // std::unique_ptr<NBTCompound>
+    TagType<Tag::Byte_Array>::Type, // std::vector<int8_t>
+    TagType<Tag::Int_Array>::Type,  // std::vector<int32_t>
+    TagType<Tag::Long_Array>::Type  // std::vector<int64_t>
 >;
+
+// ------------------> Parser Function Forward Declarations <------------------
+
+void parseNBTCompound(uint8_t*& iterator, NBTCompound& parent);
+NBTValue parseNBTList(uint8_t*& iterator);
 
 // --------------------------> NBTCompound <--------------------------
 
@@ -326,7 +352,11 @@ public:
         parseNBTCompound(iterator, *this);
     }
 
-    const NBTValue& getValue(const std::string& key) const {
+    NBTValue& operator[](const std::string& key) {
+        return mMap.at(key);
+    }
+    
+    const NBTValue& operator[](const std::string& key) const {
         return mMap.at(key);
     }
 
@@ -344,16 +374,13 @@ public:
                     val->printAll(depth+1);
                     return;
                 }
-                else if constexpr (std::is_same_v<T, TagType<Tag::List>::Type>) {
+                else if constexpr (is_NBTList_type_v<T>) {
                     std::cout << std::endl;
-                    std::visit([depth](const auto& listPtr) {
-                        if (listPtr) {
-                            listPtr->printAll(depth + 1);
-                        } else {
-                            std::cout << "[null list pointer]" << std::endl;
-                        }
-                        return;
-                    }, val);
+                    if (val) {
+                        val->printAll(depth + 1);
+                    } else {
+                        std::cout << "[null list pointer]" << std::endl;
+                    }
                     return;
                 }
                 else if constexpr (std::is_same_v<T, TagType<Tag::Byte_Array>::Type> ||
@@ -417,7 +444,7 @@ public:
         return ptr;
     }
 
-    void makeListChild(TagType<Tag::List>::Type&& nbtList, std::string name) {
+    void makeListChild(NBTValue&& nbtList, std::string name) {
         mMap.emplace(name, std::move(nbtList));
     }
 };
@@ -520,7 +547,7 @@ void parseNBTCompound(uint8_t*& iterator, NBTCompound& parent) {
             }
             
             case Tag::List: {
-                TagType<Tag::List>::Type listPtr = parseNBTList(iterator);
+                NBTValue listPtr = parseNBTList(iterator);
                 parent.makeListChild(std::move(listPtr), tagAndName.name);
                 break;
             }
@@ -682,14 +709,12 @@ public:
 };
 
 // --------------------------> parseNBTList <--------------------------
-
-TagType<Tag::List>::Type parseNBTList(uint8_t*& iterator) {
+NBTValue parseNBTList(uint8_t*& iterator) {
     Tag tag = static_cast<Tag>(*iterator);
     int32_t listLength = readNum<Tag::Int>(iterator+1);
-
-    TagType<Tag::List>::Type listPtr;
-
     iterator += 5; // skip past tag and listLength
+
+    NBTValue listPtr;
 
     switch(tag) {
         case Tag::Byte:

@@ -6,9 +6,12 @@
 #include <cstdint>
 #include <cstring>
 #include <NBTParser.h>
-#include <NBTVDB.h>
+#include <helpers.h>
 
-void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette globalPalette, int32_t xOffset, int32_t zOffset, int32_t x, int32_t y, int32_t z);
+
+using namespace NBTParser;
+
+//void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette globalPalette, int32_t xOffset, int32_t zOffset, int32_t x, int32_t y, int32_t z);
 
 int main()
 {
@@ -81,13 +84,20 @@ int main()
     inputFile.read(reinterpret_cast<char*>(compressed), size);
 
     uint32_t uncompressedSize;
-    uint8_t* data = NBTParser::helpers::uncompress_chunk(compressed, size, uncompressedSize);
+    uint8_t* data = helpers::uncompress_chunk(compressed, size, uncompressedSize);
 
     delete[] compressed;
 
-    
+    helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
 
-    //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+    NBTCompound chunkNBT(data);
+    NBTValue& value = chunkNBT["sections"];
+
+    if (!std::holds_alternative<std::unique_ptr<NBTList<Tag::Compound>>>(value))
+    throw std::runtime_error("sections is not an NBTList<Tag::Compound>");
+    
+    NBTList<Tag::Compound>& sectionsList = *std::get<std::unique_ptr<NBTList<Tag::Compound>>>(value);
+    sectionsList.printAll();
 /*
     NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data, chunkX, chunkZ);
 
@@ -117,7 +127,7 @@ int main()
     inputFile.close();
     return 0;
 }
-
+/*
 void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette globalPalette, int32_t xOffset, int32_t zOffset, int32_t x, int32_t y, int32_t z) {
     // -----------------
     openvdb::initialize();
@@ -143,3 +153,4 @@ void serializeChunk(NBTParser::SectionPack section, NBTParser::GlobalPalette glo
     file.write(grids);
     file.close();
 }
+*/

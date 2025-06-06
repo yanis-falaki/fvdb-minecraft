@@ -18,7 +18,8 @@ https://minecraft.fandom.com/wiki/NBT_format
 #include <unordered_map>
 #include <fstream>
 #include <format>
-#include <block_list.h>
+#include <memory>
+#include <variant>
 
 namespace NBTParser {
 
@@ -27,40 +28,11 @@ static constexpr size_t SECTION_SIZE = 4096;
 static constexpr size_t SECTION_LENGTH = 16;
 static constexpr size_t MAX_CHUNKS_IN_REGION = 1024;
 
-// --------------------------> Parameter Pack Forward Declarations <--------------------------
-
-struct BlockStatesPack;
-struct SectionPack;
-struct PaletteListPack;
-
-// --------------------------> Compound Strategy Forward Declarations <--------------------------
-
-bool findSectionsList(uint8_t*& iterator);
-void printNBTStructure(uint8_t*& iterator);
-inline bool skipNBTStructure(uint8_t*& iterator);
-inline void blockStatesCompound(uint8_t*& iterator, BlockStatesPack& blockStatesPack);
-
-// --------------------------> List Strategy Forward Declarations <--------------------------
-
-inline void printList(uint8_t*& iterator);
-inline void skipList(uint8_t*& iterator);
-inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalettePack);
-
 // --------------------------> GlobalPalette <--------------------------
 
 struct GlobalPalette {
     std::vector<std::string> indexToStringVector;
     std::unordered_map<std::string, uint32_t> nameToIndexMap;
-
-    GlobalPalette() {
-        std::istringstream iss(BlockList::block_list);
-        int i = 0;
-        for (std::string line; std::getline(iss, line); ) {
-            nameToIndexMap[line] = i;
-            indexToStringVector.push_back(line);
-            ++i;
-        }
-    }
 
     GlobalPalette(std::string block_list_file_path) {
         std::ifstream infile(block_list_file_path);
@@ -93,7 +65,7 @@ struct GlobalPalette {
 
 // --------------------------> Tags enum <--------------------------
 
-enum class Tag {
+enum class Tag : uint8_t {
     End = 0,
     Byte = 1,
     Short = 2,
@@ -108,6 +80,11 @@ enum class Tag {
     Int_Array = 11,
     Long_Array = 12
 };
+
+// --------------------------> Forward Declarations <--------------------------
+
+class NBTCompound;
+template<Tag TAG> class NBTList;
 
 // --------------------------> TagType <--------------------------
 
@@ -144,91 +121,118 @@ struct TagType<Tag::Double> {
     using Type = double;
 };
 
+template<>
+struct TagType<Tag::Byte_Array> {
+    using Type = std::vector<int8_t>;
+};
+
+template<>
+struct TagType<Tag::String> {
+    using Type = std::string;
+};
+
+template<>
+struct TagType<Tag::List> {
+    using Type = std::variant<
+        std::unique_ptr<NBTList<Tag::Byte>>,
+        std::unique_ptr<NBTList<Tag::Short>>,
+        std::unique_ptr<NBTList<Tag::Int>>,
+        std::unique_ptr<NBTList<Tag::Long>>,
+        std::unique_ptr<NBTList<Tag::Float>>,
+        std::unique_ptr<NBTList<Tag::Double>>,
+        std::unique_ptr<NBTList<Tag::Byte_Array>>,
+        std::unique_ptr<NBTList<Tag::String>>,
+        std::unique_ptr<NBTList<Tag::List>>,
+        std::unique_ptr<NBTList<Tag::Compound>>,
+        std::unique_ptr<NBTList<Tag::Int_Array>>,
+        std::unique_ptr<NBTList<Tag::Long_Array>>
+    >;
+};
+
+
+template<>
+struct TagType<Tag::Compound> {
+    using Type = std::unique_ptr<NBTCompound>;
+};
+
+template<>
+struct TagType<Tag::Int_Array> {
+    using Type = std::vector<int32_t>;
+};
+
+template<>
+struct TagType<Tag::Long_Array> {
+    using Type = std::vector<int64_t>;
+};
+
+
 // --------------------------> toStr <--------------------------
 
 // Function to convert Tag to string
-inline const char* toStr(Tag tag) {
-    switch (tag) {
-        case Tag::End:           return "End";
-        case Tag::Byte:          return "Byte";
-        case Tag::Short:         return "Short";
-        case Tag::Int:           return "Int";
-        case Tag::Long:          return "Long";
-        case Tag::Float:         return "Float";
-        case Tag::Double:        return "Double";
-        case Tag::Byte_Array:    return "Byte_Array";
-        case Tag::String:        return "String";
-        case Tag::List:          return "List";
-        case Tag::Compound:      return "Compound";
-        case Tag::Int_Array:     return "Int_Array";
-        case Tag::Long_Array:    return "Long_Array";
-        default:                 return "Unknown";
-    }
+template<Tag T>
+constexpr const char* tagToStr() {
+    if constexpr (T == Tag::End)         return "End";
+    else if constexpr (T == Tag::Byte)   return "Byte";
+    else if constexpr (T == Tag::Short)  return "Short";
+    else if constexpr (T == Tag::Int)    return "Int";
+    else if constexpr (T == Tag::Long)   return "Long";
+    else if constexpr (T == Tag::Float)  return "Float";
+    else if constexpr (T == Tag::Double) return "Double";
+    else if constexpr (T == Tag::Byte_Array) return "Byte_Array";
+    else if constexpr (T == Tag::String)     return "String";
+    else if constexpr (T == Tag::List)       return "List";
+    else if constexpr (T == Tag::Compound)   return "Compound";
+    else if constexpr (T == Tag::Int_Array)  return "Int_Array";
+    else if constexpr (T == Tag::Long_Array) return "Long_Array";
+    else return "Unknown";
 }
+
+
+template<typename T>
+constexpr const char* tagTypeToStr() {
+    if constexpr (std::is_same_v<T, TagType<Tag::Byte>::Type>)       return "Byte";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Short>::Type>) return "Short";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Int>::Type>)   return "Int";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Long>::Type>)  return "Long";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Float>::Type>) return "Float";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Double>::Type>)return "Double";
+    else if constexpr (std::is_same_v<T, TagType<Tag::String>::Type>)return "String";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Compound>::Type>) return "Compound";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Byte_Array>::Type>) return "Byte_Array";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Int_Array>::Type>) return "Int_Array";
+    else if constexpr (std::is_same_v<T, TagType<Tag::Long_Array>::Type>) return "Long_Array";
+    else if constexpr (std::is_same_v<T, TagType<Tag::List>::Type>) return "List";
+    else return "Unknown";
+}
+
 
 // --------------------------> payloadLengthMap <--------------------------
 
 // If the payload could have variable length or requires special preprocessing then length is set to 0
-const uint8_t PAYLOAD_LENGTH_MAP[] = {
+constexpr size_t PAYLOAD_LENGTH_MAP[] = {
     1,   // End,
-    1,   // Byte
-    2,   // Short
-    4,   // Int
-    8,   // Long
-    4,   // Float
-    8,   // Double
-    0,  // Byte_Array
-    0,  // String
-    0,  // List
-    0,  // Compound
-    0,  // Int_Array
-    0   // Long_Array
+    sizeof(TagType<Tag::Byte>::Type),   // Byte
+    sizeof(TagType<Tag::Short>::Type),   // Short
+    sizeof(TagType<Tag::Int>::Type),   // Int
+    sizeof(TagType<Tag::Long>::Type),   // Long
+    sizeof(TagType<Tag::Float>::Type),   // Float
+    sizeof(TagType<Tag::Double>::Type),   // Double
+    sizeof(TagType<Tag::Byte_Array>::Type),  // Byte_Array
+    sizeof(TagType<Tag::String>::Type),  // String
+    sizeof(TagType<Tag::List>::Type),  // List
+    sizeof(TagType<Tag::Compound>::Type),  // Compound
+    sizeof(TagType<Tag::Int_Array>::Type),  // Int_Array
+    sizeof(TagType<Tag::Long_Array>::Type)   // Long_Array
 };
 
 // --------------------------> getPayloadLength <--------------------------
 
 // Function to get payload length for a given Tag
-inline uint8_t getPayloadLength(Tag tag) {
+constexpr size_t getPayloadLength(Tag tag) {
     return PAYLOAD_LENGTH_MAP[static_cast<int>(tag)];
 }
-inline uint8_t getPayloadLength(uint8_t tag) {
+constexpr size_t getPayloadLength(uint8_t tag) {
     return PAYLOAD_LENGTH_MAP[tag];
-}
-
-// --------------------------> parseTagAndName <--------------------------
-
-struct TagAndName {
-    bool isEnd;        // Indicates if the tag is an End tag.
-    Tag tag;           // The current tag.
-    std::string name;  // Parsed name as a string.
-};
-
-template <typename IteratorType>
-TagAndName parseTagAndName(IteratorType& iterator) {
-    TagAndName result;
-
-    // Parse the tag
-    result.tag = static_cast<Tag>(*iterator);
-    if (result.tag == Tag::End) {
-        ++iterator;  // Move the iterator forward
-        result.isEnd = true;
-        return result;
-    }
-
-    result.isEnd = false;
-
-    // Parse the name length
-    uint16_t nameLength = (*(iterator + 1) << 8) | (*(iterator + 2));
-
-    // Parse the name
-    char nameArray[nameLength + 1];
-    helpers::strcpy(iterator + 3, nameArray, nameLength);
-    result.name = nameArray;
-
-    // Move the iterator past the parsed data
-    iterator += 3 + nameLength;
-
-    return result;
 }
 
 // --------------------------> readNum <--------------------------
@@ -287,601 +291,444 @@ inline typename TagType<NumT>::Type readNum(auto&& iterator) {
    }
 }
 
-// --------------------------> Parameter Packs <--------------------------
+// ------------------> Parser Function Forward Declarations <------------------
 
-struct PalettePack {
-    std::string name;
-    PalettePack() = default;
-};
+void parseNBTCompound(uint8_t*& iterator, NBTCompound& parent);
+TagType<Tag::List>::Type parseNBTList(uint8_t*& iterator);
 
-struct PaletteListPack {
-    std::vector<PalettePack> palette;
-    
-    PalettePack& operator[](size_t index) {
-        return palette[index];
-    }
-    const PalettePack& operator[](size_t index) const {
-        return palette[index];
-    }
-    PalettePack* operator+(size_t offset) {
-        return palette.data() + offset;
-    }
-    const PalettePack* operator+(size_t offset) const {
-        return palette.data() + offset;
-    }
-    PalettePack* begin() { return palette.data(); }
-    PalettePack* end() { return palette.data() + palette.size(); }
-    const PalettePack* begin() const { return palette.data(); }
-    const PalettePack* end() const { return palette.data() + palette.size(); }
+// --------------------------> NBTValue <--------------------------
 
-    size_t size() const { return palette.size(); }
+using NBTValue = std::variant<
+    TagType<Tag::Byte>::Type,       // Byte         int8_t
+    TagType<Tag::Short>::Type,      // Short        int16_t
+    TagType<Tag::Int>::Type,        // Int          int32_t
+    TagType<Tag::Long>::Type,       // Long         int64_t
+    TagType<Tag::Float>::Type,      // Float        float
+    TagType<Tag::Double>::Type,     // Double       double
+    TagType<Tag::String>::Type,     // String       std::string
+    TagType<Tag::List>::Type,
+    TagType<Tag::Compound>::Type,   // Compound     std::unique_ptr<NBTCompound>
+    TagType<Tag::Byte_Array>::Type, // Byte Array   std::vector<int8_t>
+    TagType<Tag::Int_Array>::Type,  // Int Array    std::vector<int32_t>
+    TagType<Tag::Long_Array>::Type  // Long Array   std::vector<int64_t>
+>;
 
-    PaletteListPack() = default;
-};
+// --------------------------> NBTCompound <--------------------------
 
-struct BlockStatesPack {
-    uint64_t* dataList;
-    uint32_t dataListLength;
-    PaletteListPack palleteList;
-    BlockStatesPack() = default;
-};
+class NBTCompound {
+private:
+    std::unordered_map<std::string, NBTValue> mMap;
 
-struct SectionPack {
-    BlockStatesPack blockStates;
-    int32_t yOffset;
-    int32_t y;
-    SectionPack() = default;
-};
-
-// Section List AKA Chunk
-struct SectionListPack {
-    std::vector<SectionPack> sections;
-    int32_t xOffset;
-    int32_t zOffset;
-    int32_t x;
-    int32_t z;
-
-    SectionListPack(int32_t chunkX, int32_t chunkZ) {
-        xOffset = chunkX  << 4;
-        zOffset = chunkZ << 4;
-        x = chunkX;
-        z = chunkZ;
+public:
+    NBTCompound() = default;
+    NBTCompound(uint8_t* iterator) {
+        parseNBTCompound(iterator, *this);
     }
-    
-    SectionPack& operator[](size_t index) {
-        return sections[index];
-    }
-    const SectionPack& operator[](size_t index) const {
-        return sections[index];
-    }
-    SectionPack* operator+(size_t offset) {
-        return sections.data() + offset;
-    }
-    const SectionPack* operator+(size_t offset) const {
-        return sections.data() + offset;
-    }
-    SectionPack* begin() { return sections.data(); }
-    SectionPack* end() { return sections.data() + sections.size(); }
-    const SectionPack* begin() const { return sections.data(); }
-    const SectionPack* end() const { return sections.data() + sections.size(); }
 
-    inline bool getSectionWithY(SectionPack* dest, int32_t chunkY) {
-        uint32_t section_index;
-        for (uint32_t i = 0; i < sections.size(); ++i) {
-            if (sections[i].y == chunkY){
-                *dest = sections[i];
-                return true;
-            }
+    const NBTValue& getValue(const std::string& key) const {
+        return mMap.at(key);
+    }
+
+    void printAll(uint32_t depth=0) const {
+        for (const auto& [key, value] : mMap) {
+            std::visit([&key, depth](const auto& val) {
+                using T = std::decay_t<decltype(val)>;
+
+                std::cout << std::string(depth * 2, ' ');
+                std::cout << helpers::colorKey << key << helpers::colorReset << '(' 
+                          << helpers::colorTag << tagTypeToStr<T>() << helpers::colorReset << ')' << ": ";
+
+                if constexpr (std::is_same_v<T, TagType<Tag::Compound>::Type>) {
+                    std::cout << std::endl;
+                    val->printAll(depth+1);
+                    return;
+                }
+                else if constexpr (std::is_same_v<T, TagType<Tag::List>::Type>) {
+                    std::cout << std::endl;
+                    std::visit([depth](const auto& listPtr) {
+                        if (listPtr) {
+                            listPtr->printAll(depth + 1);
+                        } else {
+                            std::cout << "[null list pointer]" << std::endl;
+                        }
+                        return;
+                    }, val);
+                    return;
+                }
+                else if constexpr (std::is_same_v<T, TagType<Tag::Byte_Array>::Type> ||
+                                   std::is_same_v<T, TagType<Tag::Int_Array>::Type> ||
+                                   std::is_same_v<T, TagType<Tag::Long_Array>::Type>) {
+                    std::cout << "Length: " << val.size();
+                }
+                else if constexpr (std::is_same_v<T, TagType<Tag::Byte>::Type> ||
+                              std::is_same_v<T, TagType<Tag::Short>::Type> ||
+                              std::is_same_v<T, TagType<Tag::Int>::Type> ||
+                              std::is_same_v<T, TagType<Tag::Long>::Type> ||
+                              std::is_same_v<T, TagType<Tag::Float>::Type> ||
+                              std::is_same_v<T, TagType<Tag::Double>::Type> ||
+                              std::is_same_v<T, TagType<Tag::String>::Type>) {
+                    std::cout << val;
+                }
+                std::cout << std::endl;
+            }, value);
         }
-        return false;
     }
 
-    inline int32_t getSectionIndexWithY(int32_t chunkY) {
-        uint32_t section_index;
-        for (uint32_t i = 0; i < sections.size(); ++i) {
-            if (sections[i].y == chunkY){
-                return i;
-            }
+    void makeByteChild(uint8_t value, std::string name) {
+        mMap.emplace(name, value);
+    }
+
+    template<Tag NumT>
+    void makeNumericChild(auto value, std::string name) {
+        static_assert((NumT == Tag::Byte) || (NumT == Tag::Short) || (NumT == Tag::Int) ||
+                      (NumT == Tag::Long) || (NumT == Tag::Float) || (NumT == Tag::Double));
+        mMap.emplace(name, value);
+    }
+
+    void makeStringChild(std::string value, std::string name) {
+        mMap.emplace(name, value);
+    }
+
+    void makeByteArrayChild(uint8_t* startPtr, uint32_t length, std::string name) {
+        mMap.emplace(name, std::vector<int8_t>(startPtr, startPtr + length));
+    }
+
+    void makeIntArrayChild(uint8_t* startPtr, uint32_t length, std::string name) {
+        std::vector<int32_t> vector(length);
+        for (uint32_t i = 0; i < length; ++i) {
+            vector[i] = readNum<Tag::Int>(startPtr + i * 4);
         }
-        return -1;
+        mMap.emplace(name, std::move(vector));
     }
 
-    size_t size() const { return sections.size(); }
+    void makeLongArrayChild(uint8_t* startPtr, uint32_t length, std::string name) {
+        std::vector<int64_t> vector(length);
+        for (uint32_t i = 0; i < length; ++i) {
+            vector[i] = readNum<Tag::Long>(startPtr + i * 8);
+        }
+        mMap.emplace(name, std::move(vector));
+    }
 
-    SectionListPack() = default;
+    NBTCompound* makeCompoundChild(std::string name) {
+        auto child = std::make_unique<NBTCompound>();
+        auto ptr = child.get();
+        mMap.emplace(name, std::move(child));
+        return ptr;
+    }
+
+    void makeListChild(TagType<Tag::List>::Type&& nbtList, std::string name) {
+        mMap.emplace(name, std::move(nbtList));
+    }
 };
 
-// --------------------------> parseNBTStructure (main loop) <--------------------------
+// --------------------------> parseTagAndName <--------------------------
 
-template<typename Strategy, typename... OptionalParamPack>
-bool parseNBTStructure(uint8_t*& iterator, Strategy& strategy, OptionalParamPack&... optionalParamPack) {
+struct TagAndName {
+    bool isEnd;        // Indicates if the tag is an End tag.
+    Tag tag;           // The current tag.
+    std::string name;  // Parsed name as a string.
+};
+
+template <typename IteratorType>
+TagAndName parseTagAndName(IteratorType& iterator) {
+    TagAndName result;
+
+    // Parse the tag
+    result.tag = static_cast<Tag>(*iterator);
+    if (result.tag == Tag::End) {
+        ++iterator;  // Move the iterator forward
+        result.isEnd = true;
+        return result;
+    }
+
+    result.isEnd = false;
+
+    // Parse the name length
+    uint16_t nameLength = (*(iterator + 1) << 8) | (*(iterator + 2));
+
+    // Parse the name
+    char nameArray[nameLength + 1];
+    helpers::strcpy(iterator + 3, nameArray, nameLength);
+    result.name = nameArray;
+
+    // Move the iterator past the parsed data
+    iterator += 3 + nameLength;
+
+    return result;
+}
+
+// --------------------------> parseNBTCompound (main loop) <--------------------------
+
+void parseNBTCompound(uint8_t*& iterator, NBTCompound& parent) {
     while (true) {
         auto tagAndName = parseTagAndName(iterator);
-        strategy.preamble(iterator, tagAndName, optionalParamPack...); // optional printing
-        if (tagAndName.isEnd) return false;
+        if (tagAndName.isEnd) return;
 
         switch (tagAndName.tag) {
-            case Tag::Byte: 
-                strategy.template handleByteTag(iterator, tagAndName, optionalParamPack...);
+            case Tag::Byte: {
+                auto value = readNum<Tag::Byte>(iterator);
+                parent.makeByteChild(value, tagAndName.name);
                 iterator += getPayloadLength(Tag::Byte);
                 break;
-            case Tag::Short: 
-                strategy.template handleNumericTag<Tag::Short>(iterator, tagAndName, optionalParamPack...);
+            }
+            case Tag::Short: {
+                auto value = readNum<Tag::Short>(iterator);
+                parent.makeNumericChild<Tag::Short>(value, tagAndName.name);
                 iterator += getPayloadLength(Tag::Short);
                 break;
-            case Tag::Int: 
-                strategy.template handleNumericTag<Tag::Int>(iterator, tagAndName, optionalParamPack...);
+            }
+            case Tag::Int: { 
+                auto value = readNum<Tag::Int>(iterator);
+                parent.makeNumericChild<Tag::Int>(value, tagAndName.name);
                 iterator += getPayloadLength(Tag::Int);
                 break;
-            case Tag::Long: 
-                strategy.template handleNumericTag<Tag::Long>(iterator, tagAndName, optionalParamPack...);
+            }
+            case Tag::Long: { 
+                auto value = readNum<Tag::Long>(iterator);
+                parent.makeNumericChild<Tag::Long>(value, tagAndName.name);
                 iterator += getPayloadLength(Tag::Long);
                 break;
-            case Tag::Float: 
-                strategy.template handleNumericTag<Tag::Float>(iterator, tagAndName, optionalParamPack...);
+            }
+            case Tag::Float: { 
+                auto value = readNum<Tag::Float>(iterator);
+                parent.makeNumericChild<Tag::Float>(value, tagAndName.name);
                 iterator += getPayloadLength(Tag::Float);
                 break;
-            case Tag::Double: 
-                strategy.template handleNumericTag<Tag::Double>(iterator, tagAndName, optionalParamPack...);
+            }
+            case Tag::Double: { 
+                auto value = readNum<Tag::Double>(iterator);
+                parent.makeNumericChild<Tag::Double>(value, tagAndName.name);
                 iterator += getPayloadLength(Tag::Double);
                 break;
+            }
 
             case Tag::Byte_Array: {
                 uint32_t length = (*iterator << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | *(iterator + 3);
-                strategy.handleByteArray(iterator, tagAndName, length, optionalParamPack...);
+                parent.makeByteArrayChild(iterator + 4, length, tagAndName.name);
+                iterator += 4 + length;
                 break;
             }
-
+            
             case Tag::String: {
                 uint16_t stringLength = (*iterator << 8) | (*(iterator + 1));
-                strategy.handleString(iterator, tagAndName, stringLength, optionalParamPack...);
+                char stringArray[stringLength + 1];
+                helpers::strcpy(iterator+2, stringArray, stringLength);
+                parent.makeStringChild(stringArray, tagAndName.name);
                 iterator += 2 + stringLength;
                 break;
             }
-
+            
             case Tag::List: {
-                if (strategy.handleList(iterator, tagAndName, optionalParamPack...))
-                    return true;
+                TagType<Tag::List>::Type listPtr = parseNBTList(iterator);
+                parent.makeListChild(std::move(listPtr), tagAndName.name);
                 break;
             }
-
+            
             case Tag::Compound: {
-                if (strategy.handleCompound(iterator, tagAndName, optionalParamPack...))
-                    return true;
+                auto childPtr = parent.makeCompoundChild(tagAndName.name);
+                parseNBTCompound(iterator, *childPtr);
                 break;
             }
 
             case Tag::Int_Array: {
                 int32_t length = readNum<Tag::Int>(iterator);
-                strategy.handleIntArray(iterator, tagAndName, length, optionalParamPack...);
+                parent.makeIntArrayChild(iterator + 4, length, tagAndName.name);
+                iterator += 4 + 4*length;
                 break;
             }
 
             case Tag::Long_Array: {
                 int32_t length = (*(iterator) << 24) | (*(iterator + 1) << 16) | (*(iterator + 2) << 8) | (*(iterator + 3));
-                strategy.handleLongArray(iterator, tagAndName, length, optionalParamPack...);
+                parent.makeLongArrayChild(iterator + 4, length, tagAndName.name);
+                iterator += 4 + 8*length;
                 break;
             }
         }
     }
 }
 
-// --------------------------> BaseNBTStrategy <--------------------------
+// --------------------------> NBTList <--------------------------
 
-template<typename... OptionalParamPack>
-struct BaseNBTStrategy {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
-    template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {}
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length, OptionalParamPack&... optionalParamPack) {
-        iterator += 4 + length;
-    }
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, OptionalParamPack&... optionalParamPack) {}
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
-        skipList(iterator);
-        return false;
-    }
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, OptionalParamPack&... optionalParamPack) {
-        return skipNBTStructure(iterator);
-    }
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, int32_t length, OptionalParamPack&... optionalParamPack) {
-        iterator += 4 + length*8;
-    }
-    inline void handleIntArray(uint8_t*& iterator, const auto& tagAndName, int32_t length, OptionalParamPack&... optionalParamPack) {
-        iterator += 4 + length*4;
-    }
-};
+template <Tag TAG>
+class NBTList {
+private:
+    using ValueType = typename TagType<TAG>::Type;
+    std::vector<ValueType> mValues;
 
-// --------------------------> FindSectionsListStrategy <--------------------------
-
-struct FindSectionsListStrategy : BaseNBTStrategy<> {
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName) {
-        if (tagAndName.name == "sections") return true;
-        skipList(iterator);
-        return false;
-    }
-};
-
-// --------------------------> PrintNBTStructureStrategy <--------------------------
-
-struct PrintNBTStructureStrategy : BaseNBTStrategy<> {
-    inline void preamble(uint8_t*& iterator, const auto& tagAndName) {
-        std::cout << "Tag: " << toStr(tagAndName.tag) << "\tName: " << tagAndName.name << std::endl;
-    }
-
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName) {
-        auto value = readNum<Tag::Byte>(iterator);
-        std::cout << "Value: " << static_cast<int>(value) << std::endl;
-    }
-
-    template<Tag NumTag>
-    inline void handleNumericTag(uint8_t*& iterator, const auto& tagAndName) {
-        auto value = readNum<NumTag>(iterator);
-        std::cout << "Value: " << value << std::endl;
-    }
-
-    inline void handleByteArray(uint8_t*& iterator, const auto& tagAndName, uint32_t length) {
-        iterator += 4;
-        for (int i = 0; i < length; ++i) {
-            std::cout << (short)(*(iterator));
-            iterator += 1;
+    static std::vector<ValueType> readNumericValues(uint8_t*& startPtr, int32_t length) {
+        constexpr size_t payloadLength = getPayloadLength(TAG);
+        std::vector<ValueType> values(length);
+        for (size_t i = 0; i < length; i++) {
+            values[i] = readNum<TAG>(startPtr);
+            startPtr += payloadLength;
         }
-        std::cout << std::endl;
+        return values;
     }
 
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength) {
-        char stringArray[stringLength + 1];
-        helpers::strcpy(iterator+2, stringArray, stringLength);
-        std::cout << stringArray << std::endl;
+public:
+    ~NBTList() = default;
+
+    // copying has implications I don't want to deal with for now.
+    NBTList(const NBTList& other) = default;
+    NBTList& operator=(const NBTList& other) = default;
+
+    NBTList(NBTList&& other) = default;
+    NBTList& operator=(NBTList&& other) = default;
+
+    const std::vector<ValueType>& getValues() const {
+        return mValues;
     }
 
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName) {
-        printList(iterator);
-        return false;
-    }
+    const void printAll(uint32_t depth = 0) {
+        std::cout << std::string(depth * 2, ' ');
+        std::cout << "Tag: " << helpers::colorTag << tagToStr<TAG>()
+                << helpers::colorReset << " Length: " << mValues.size() << std::endl;
 
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName) {
-        printNBTStructure(iterator);
-        return false;
-    }
-};
-
-// --------------------------> SectionCompoundStrategy <--------------------------
-
-struct SectionCompoundStrategy : BaseNBTStrategy<SectionPack> {
-    inline void handleByteTag(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
-        sectionPack.y = readNum<Tag::Byte>(iterator);
-        sectionPack.yOffset = sectionPack.y << 4;
-    }
-
-    inline bool handleCompound(uint8_t*& iterator, const auto& tagAndName, SectionPack& sectionPack) {
-        if (tagAndName.name == "block_states") blockStatesCompound(iterator, sectionPack.blockStates);
-        else skipNBTStructure(iterator); 
-        return false;
-    }
-};
-
-// --------------------------> BlockStatesCompoundStrategy <--------------------------
-
-struct BlockStatesCompoundStrategy : BaseNBTStrategy<BlockStatesPack> {
-    inline void handleLongArray(uint8_t*& iterator, const auto& tagAndName, int32_t length, BlockStatesPack& blockStatesPack) {
-        iterator += 4;
-        blockStatesPack.dataList = new uint64_t[length];
-        for (int i = 0; i < length; ++i) {
-            blockStatesPack.dataList[i] = readNum<Tag::Long>(iterator);
-            iterator += 8;
-        }
-        blockStatesPack.dataListLength = length;
-    }
-
-    inline bool handleList(uint8_t*& iterator, const auto& tagAndName, BlockStatesPack& blockStatesPack) {
-        sectionPalleteList(iterator, blockStatesPack.palleteList);
-        return false;
-    }
-};
-
-// --------------------------> PaletteCompoundStrategy <--------------------------
-
-struct PalleteCompoundStrategy : BaseNBTStrategy<PalettePack> {
-    inline void handleString(uint8_t*& iterator, const auto& tagAndName, uint16_t stringLength, PalettePack& palettePack) {
-        palettePack.name.assign(reinterpret_cast<char*>(iterator+2), stringLength);
-    }
-};
-
-
-// --------------------------> Strategy Wrappers <--------------------------
-inline bool findSectionsList(uint8_t*& iterator) {
-    iterator += 3; // skipping overarching compound tag so that we can use skipNBTStructure in FindSectionsListStrategy::handleCompound.
-                   // otherwise, we'd need to do comparison checks within every nested list within a compound tag for tagAndName.name == "sections",
-                   // despite knowing it should be located at the top level.
-    FindSectionsListStrategy strategy;
-    return parseNBTStructure(iterator, strategy);
-}
-
-inline bool skipNBTStructure(uint8_t*& iterator) {
-    BaseNBTStrategy strategy;
-    return parseNBTStructure(iterator, strategy);
-}
-
-inline void printNBTStructure(uint8_t*& iterator) {
-    PrintNBTStructureStrategy strategy;
-    parseNBTStructure(iterator, strategy);
-}
-
-inline void sectionCompound(uint8_t*& iterator, SectionPack& sectionPack) {
-    SectionCompoundStrategy strategy;
-    parseNBTStructure(iterator, strategy, sectionPack);
-}
-
-inline void blockStatesCompound(uint8_t*& iterator, BlockStatesPack& blockStatesPack) {
-    BlockStatesCompoundStrategy strategy;
-    parseNBTStructure(iterator, strategy, blockStatesPack);
-}
-
-inline void paletteCompound(uint8_t*& iterator, PalettePack& palettePack) {
-    PalleteCompoundStrategy strategy;
-    parseNBTStructure(iterator, strategy, palettePack);
-}
-
-// --------------------------> exploreList <--------------------------
-
-template<typename ListStrategy, typename... OptionalParamPack>
-void exploreList(uint8_t*& iterator, ListStrategy listStrategy, OptionalParamPack&... optionalParamPack) {
-    uint8_t payloadTagLength =  getPayloadLength(*iterator);
-    Tag list_tag = static_cast<Tag>(*iterator);
-    int32_t listLength = readNum<Tag::Int>(iterator+1);
-
-    iterator += 5 + (payloadTagLength * listLength);
-
-    listStrategy.preamble(list_tag, listLength, optionalParamPack...);
-
-    if (list_tag == Tag::End) return;
-
-    // If atypical list_tag, then the iterator will have only jumped 5 units as payloadTagLength will be zero
-    if (list_tag == Tag::Compound) {
-        listStrategy.handleCompound(iterator, listLength, optionalParamPack...);
-    }
-    else if (list_tag == Tag::String) {
-        listStrategy.handleString(iterator, listLength, optionalParamPack...);
-    }
-    else if (list_tag == Tag::List) {
-        listStrategy.handleList(iterator, listLength, optionalParamPack...);
-    }
-    else if (list_tag == Tag::Int_Array) {
-        listStrategy.handleIntArray(iterator, listLength, optionalParamPack...);
-    }
-    else if (list_tag == Tag::Long_Array) {
-        listStrategy.handleLongArray(iterator, listLength, optionalParamPack...);
-    }
-}
-
-// --------------------------> List Strategies <--------------------------
-
-template<typename... Args>
-struct BaseListStrategy {
-    inline void preamble(Tag list_tag, int32_t listLength, Args&... args) {}
-
-    inline void handleCompound(uint8_t*& iterator, uint32_t listLength, Args&... args) {
-        for (int i = 0; i < listLength; ++i) skipNBTStructure(iterator);
-    }
-
-    inline void handleString(uint8_t*& iterator, uint32_t listLength, Args&... args) {
-        for (int i = 0; i < listLength; ++i) {
-            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
-            iterator += 2 + stringLength;
-        }
-    }
-
-    inline void handleList(uint8_t*& iterator, uint32_t listLength, Args&... args) {
-        for (int i = 0; i < listLength; ++i) skipList(iterator);
-    }
-
-    inline void handleIntArray(uint8_t*& iterator, uint32_t listLength, Args&... args) {
-        int32_t currentArrayLength;
-        for (int i = 0; i < listLength; ++i) {
-            currentArrayLength = readNum<Tag::Int>(iterator);
-            iterator += 4 + currentArrayLength*4;
-        }
-    }
-
-    inline void handleLongArray(uint8_t*& iterator, uint32_t listLength, Args&... args) {
-        int32_t currentArrayLength;
-        for (int i = 0; i < listLength; ++i) {
-            currentArrayLength = readNum<Tag::Int>(iterator);
-            iterator += 4 + currentArrayLength*8;
-        }
-    }
-};
-
-struct PrintListStrategy : BaseListStrategy<> {
-    inline void preamble(Tag list_tag, int32_t listLength) {
-        if (list_tag == Tag::End) {
-            std::cout << "Empty List of size: " << listLength << std::endl;
-            return;
-        }
-        std::cout << toStr(list_tag) << " List of size: " << listLength << std::endl;
-    }
-
-    inline void handleCompound(uint8_t*& iterator, uint32_t listLength) {
-        for (int i = 0; i < listLength; ++i) printNBTStructure(iterator);
-    }
-
-    inline void handleString(uint8_t*& iterator, uint32_t listLength) {
-        for (int i = 0; i < listLength; ++i) {
-            int32_t stringLength = (*iterator << 8) | (*(iterator + 1));
-
-            char stringArray[stringLength + 1];
-            helpers::strcpy(iterator+2, stringArray, stringLength);
-            std::cout << stringArray << std::endl;
-
-            iterator += 2 + stringLength;
-        }
-    }
-
-    inline void handleList(uint8_t*& iterator, uint32_t listLength) {
-        for (int i = 0; i < listLength; ++i) printList(iterator);
-    }
-};
-
-struct SectionPaletteStrategy : BaseListStrategy<PaletteListPack> {
-    inline void handleCompound(uint8_t*& iterator, uint32_t listLength, PaletteListPack& blockPalletePack) {
-        blockPalletePack.palette.resize(listLength);
-        for (int i = 0; i < listLength; ++i)
-            paletteCompound(iterator, blockPalletePack.palette[i]);
-    }
-};
-
-struct SectionListStrategy : BaseListStrategy<SectionListPack> {
-    inline void handleCompound(uint8_t*& iterator, uint32_t listLength, SectionListPack& sectionListPack) {
-        sectionListPack.sections.resize(listLength);
-        for (int i = 0; i < listLength; ++i)
-            sectionCompound(iterator, sectionListPack.sections[i]);
-    }
-};
-
-// --------------------------> List Strategy Wrappers <--------------------------
-
-inline void printList(uint8_t*& iterator) {
-    PrintListStrategy listStrategy;
-    exploreList(iterator, listStrategy);
-}
-
-inline void skipList(uint8_t*& iterator) {
-    BaseListStrategy listStrategy;
-    exploreList(iterator, listStrategy);
-}
-
-inline void sectionPalleteList(uint8_t*& iterator, PaletteListPack& blockPalettePack) {
-    SectionPaletteStrategy listStrategy;
-    exploreList(iterator, listStrategy, blockPalettePack);
-}
-
-inline void sectionsList(uint8_t*& iterator, SectionListPack& sectionsList) {
-    SectionListStrategy listStrategy;
-    exploreList(iterator, listStrategy, sectionsList);
-}
-
-// --------------------------> getSectionListPack <--------------------------
-
-// 'iterator' is passed by value, so changes to it in this function
-// do not affect the original position of the iterator passed by the caller.
-SectionListPack getSectionListPack(uint8_t* localIterator, int32_t chunkX, int32_t chunkZ) {
-    bool foundSections = findSectionsList(localIterator);
-    SectionListPack sectionList(chunkX, chunkZ);
-    sectionsList(localIterator, sectionList);
-    return sectionList;
-}
-
-// --------------------------> commonSectionUnpackingLogic <--------------------------
-
-template<class UnpackSectionStrategy, typename... OptionalParams>
-void commonSectionUnpackingLogic(UnpackSectionStrategy unpackSectionStrategy, GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, OptionalParams&&... optionalParams) {
-    // generate localToGlobalPaletteIndex array
-    uint32_t localPaletteSize = section.blockStates.palleteList.size();
-    uint32_t localToGlobalPaletteIndex[localPaletteSize];
-    for(uint32_t i = 0; i < localPaletteSize; i++) {
-        if (globalPalette.nameExists(section.blockStates.palleteList[i].name))
-            localToGlobalPaletteIndex[i] = globalPalette[section.blockStates.palleteList[i].name];
-        else {
-            std::cout << section.blockStates.palleteList[i].name << " does not exist in global block list, replacing with air" << std::endl;
-            localToGlobalPaletteIndex[i] = 0;
-        }
-    }
-
-    // Handle unary section
-    if (localPaletteSize == 1) {
-        uint32_t index = 0;
-        for (uint32_t j = 0; j < 16; j++) {
-            for (uint32_t k = 0; k < 16; ++k) {
-                for (uint32_t i = 0; i < 16; ++i) {
-                    unpackSectionStrategy.insert(index, i + xOffset, j + section.yOffset, k + zOffset, localToGlobalPaletteIndex[0], optionalParams...);
-                    ++index; 
+        if constexpr (TAG == Tag::Compound) {
+            for (size_t i = 0; i < mValues.size(); ++i) {
+                auto& compoundPtr = mValues[i];
+                std::cout << std::string(depth * 2, ' ') << "Compound #" << i << std::endl;
+                if (compoundPtr) {
+                    compoundPtr->printAll(depth + 1);
+                } else {
+                    std::cout << std::string((depth + 1) * 2, ' ') << "[null compound]" << std::endl;
                 }
             }
         }
+
         return;
     }
 
-    // calculate min number of bits to represent palette index
-    uint32_t num_bits = helpers::bitLength(localPaletteSize);
-    if (num_bits < 4) num_bits = 4;
+    // Byte
+    NBTList(uint8_t*& startPtr, int32_t length) requires (TAG == Tag::Byte) {
+        std::vector<ValueType> values(startPtr, startPtr + length);
+        mValues = std::move(values);
+        startPtr += length;
+    }
 
-    // make bitmask
-    uint64_t bitmask = ((1ULL << num_bits) - 1);
+    // Numeric
+    NBTList(uint8_t*& startPtr, int32_t length) requires (
+        TAG == Tag::Short || TAG == Tag::Int || TAG == Tag::Long ||
+        TAG == Tag::Float || TAG == Tag::Double
+    ) {
+        mValues = readNumericValues(startPtr, length);
+    };
 
-    uint32_t indexes_per_element = 64 / num_bits;
-    uint32_t last_state_elements = SECTION_SIZE % indexes_per_element;
-    if (last_state_elements == 0) last_state_elements = indexes_per_element;
-
-    // First loop
-    for (int i = 0; i < section.blockStates.dataListLength - 1; ++i) {
-        uint64_t word = section.blockStates.dataList[i];
-
-        for (int j = 0; j < indexes_per_element; ++j) {
-            uint32_t globalIndex = i * indexes_per_element + j;
-            uint32_t localPaletteIndex = (uint32_t)(word & bitmask);
-            
-            uint32_t localX, localY, localZ;
-            helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
-
-            unpackSectionStrategy.insert(globalIndex, localX + xOffset, localY + section.yOffset, localZ + zOffset, localToGlobalPaletteIndex[localPaletteIndex], optionalParams...);
-            
-            word = word >> num_bits;
+    // Byte_Array
+    NBTList(uint8_t*& startPtr, int32_t length) requires (TAG == Tag::Byte_Array) {
+        mValues.resize(length);
+        for (size_t i = 0; i < length; ++i) {
+            int32_t currentArrayLength = readNum<Tag::Int>(startPtr);
+            startPtr += 4;
+            mValues[i] = std::vector<typename TagType<Tag::Byte>::Type>(startPtr, startPtr + currentArrayLength);
+            startPtr += currentArrayLength;
         }
     }
 
-    // Final word
-    int32_t finalWordIndex = section.blockStates.dataListLength - 1;
-    int64_t finalWord = section.blockStates.dataList[finalWordIndex];
-    for (int j = 0; j < last_state_elements; ++j) {
-        uint32_t globalIndex = finalWordIndex * indexes_per_element + j;
-        uint32_t localPaletteIndex = (uint32_t)(finalWord & bitmask);
-        
-        uint32_t localX, localY, localZ;
-        helpers::sectionDataIndexToLocalCoords(globalIndex, localX, localY, localZ);
-
-        unpackSectionStrategy.insert(globalIndex, localX + xOffset, localY + section.yOffset, localZ + zOffset, localToGlobalPaletteIndex[localPaletteIndex], optionalParams...);
-        
-        finalWord = finalWord >> num_bits;
+    // String
+    NBTList(uint8_t*& startPtr, int32_t length) requires (TAG == Tag::String) {
+        mValues.resize(length);
+        for (size_t i = 0; i < length; ++i) {
+            uint16_t stringLength = (*startPtr << 8) | (*(startPtr + 1)); // unsigned short not implemented in readNum
+            startPtr += 2;
+            mValues[i] = std::string(reinterpret_cast<const char*>(startPtr), stringLength);
+            startPtr += stringLength;
+        }
     }
-}
 
-// --------------------------> BaseUnpackSectionStrategy <--------------------------
+    // TODO implement nested lists
+    NBTList(uint8_t* startPtr, int32_t length) requires (TAG == Tag::List) {
+        return;
+    }
 
-struct BaseUnpackSectionStrategy {
-    inline void insert(uint32_t dataIndex, int32_t i, int32_t j, int32_t k, int32_t paletteIndex, auto& optionalParams) {}
+    // Compound
+    NBTList(uint8_t*& startPtr, int32_t length) requires (TAG == Tag::Compound) {
+        mValues.resize(length);
+        for (size_t i = 0; i < length; ++i) {
+            auto compound = std::make_unique<NBTCompound>();
+            parseNBTCompound(startPtr, *compound);
+            mValues[i] = std::move(compound);
+        }
+    }
+
+    // Int_Array
+    NBTList(uint8_t*& startPtr, int32_t length) requires (TAG == Tag::Int_Array) {
+        mValues.resize(length);
+        for (size_t i = 0; i < length; ++i) {
+            int32_t currentArrayLength = readNum<Tag::Int>(startPtr);
+            startPtr += 4;
+            mValues[i].resize(currentArrayLength);
+            for (size_t j = 0; j < currentArrayLength; ++j) {
+                mValues[i][j] = readNum<Tag::Int>(startPtr);
+                startPtr += 4;
+            }
+        }
+    }
+
+    // Long_Array
+    NBTList(uint8_t*& startPtr, int32_t length) requires (TAG == Tag::Long_Array) {
+        mValues.resize(length);
+        for (size_t i = 0; i < length; ++i) {
+            int32_t currentArrayLength = readNum<Tag::Int>(startPtr);
+            startPtr += 4;
+            mValues[i].resize(currentArrayLength);
+            for (size_t j = 0; j < currentArrayLength; ++j) {
+                mValues[i][j] = readNum<Tag::Long>(startPtr);
+                startPtr += 8;
+            }
+        }
+    }
 };
 
-// --------------------------> SectionToCoordsStrategy <--------------------------
+// --------------------------> parseNBTList <--------------------------
 
-struct SectionToCoordsStrategy : BaseUnpackSectionStrategy {
-    inline void insert(uint32_t dataIndex, int32_t i, int32_t j, int32_t k, int32_t paletteIndex, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_indices) {
-        i_coords[dataIndex] = i;
-        j_coords[dataIndex] = j;
-        k_coords[dataIndex] = k;
-        palette_indices[dataIndex] = paletteIndex;
+TagType<Tag::List>::Type parseNBTList(uint8_t*& iterator) {
+    Tag tag = static_cast<Tag>(*iterator);
+    int32_t listLength = readNum<Tag::Int>(iterator+1);
+
+    TagType<Tag::List>::Type listPtr;
+
+    iterator += 5; // skip past tag and listLength
+
+    switch(tag) {
+        case Tag::Byte:
+            listPtr = std::make_unique<NBTList<Tag::Byte>>(iterator, listLength);
+            break;
+        case Tag::Short: 
+            listPtr = std::make_unique<NBTList<Tag::Short>>(iterator, listLength);
+            break;
+        case Tag::Int: 
+            listPtr = std::make_unique<NBTList<Tag::Int>>(iterator, listLength);
+            break;
+        case Tag::Long: 
+            listPtr = std::make_unique<NBTList<Tag::Long>>(iterator, listLength);
+            break;
+        case Tag::Float: 
+            listPtr = std::make_unique<NBTList<Tag::Float>>(iterator, listLength);
+            break;
+        case Tag::Double: 
+            listPtr = std::make_unique<NBTList<Tag::Double>>(iterator, listLength);
+            break;
+        case Tag::Byte_Array:
+            listPtr = std::make_unique<NBTList<Tag::Byte_Array>>(iterator, listLength);
+            break;
+        case Tag::String:
+            listPtr = std::make_unique<NBTList<Tag::String>>(iterator, listLength);
+            break;
+        case Tag::List:
+            listPtr = std::make_unique<NBTList<Tag::List>>(iterator, listLength);
+            break;
+        case Tag::Compound:
+            listPtr = std::make_unique<NBTList<Tag::Compound>>(iterator, listLength);
+            break;
+        case Tag::Int_Array:
+            listPtr = std::make_unique<NBTList<Tag::Int_Array>>(iterator, listLength);
+            break;
+        case Tag::Long_Array:
+            listPtr = std::make_unique<NBTList<Tag::Long_Array>>(iterator, listLength);
+            break;
     }
-};
-
-// --------------------------> sectionToCoords <--------------------------
-
-/// @brief parses a sectionList into a list of ijks and associated block
-void sectionToCoords(GlobalPalette& globalPalette, SectionPack& section, int32_t xOffset, int32_t zOffset, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_indices) {
-    SectionToCoordsStrategy strategy;
-    commonSectionUnpackingLogic(strategy, globalPalette, section, xOffset, zOffset, i_coords, j_coords, k_coords, palette_indices);
-}
-
-// --------------------------> sectionListToCoords <--------------------------
-
-void sectionListToCoords(GlobalPalette& globalPalette, SectionListPack& sectionList, int32_t* i_coords, int32_t* j_coords, int32_t* k_coords, int32_t* palette_indices) {
-    SectionToCoordsStrategy strategy;
-    uint32_t numSections = sectionList.size();
-
-    // w << 12 = w*SECTION_SIZE
-    for (uint32_t w = 0; w < numSections; ++w) {
-        commonSectionUnpackingLogic(strategy, globalPalette, sectionList[w], sectionList.xOffset, sectionList.zOffset, i_coords + (w << 12), j_coords + (w << 12), k_coords + (w << 12), palette_indices + (w << 12));
-    }
+    return listPtr;
 }
 
 } // namespace NBTParser

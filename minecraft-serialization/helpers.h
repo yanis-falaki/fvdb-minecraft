@@ -11,6 +11,11 @@
 namespace NBTParser::helpers 
 {
 
+// --------------------------> Color Code Strings (for printing) <--------------------------
+const char* colorKey = "\033[36m";    // cyan for keys
+const char* colorTag = "\033[33m";    // yellow for tag
+const char* colorReset = "\033[0m";   // reset
+
 // --------------------------> Object Dump (used for debugging) <--------------------------
 
 void hexDumpArrayToFile(const unsigned char *data, size_t size, const char *filename) {

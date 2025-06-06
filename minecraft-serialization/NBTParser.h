@@ -174,7 +174,7 @@ struct is_NBTList_type : std::false_type {};
 
 // Specialization: true for std::unique_ptr<NBTList<TAG>>
 template <Tag TAG>
-struct is_NBTList_type<std::unique_ptr<NBTList<TAG>>> : std::true_type {};
+struct is_NBTList_type<std::unique_ptr<NBTList<TAG>>> : std::bool_constant<TAG != Tag::End> {};
 
 // Helper variable template
 template <typename T>

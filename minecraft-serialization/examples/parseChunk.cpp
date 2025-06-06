@@ -78,12 +78,9 @@ int main()
 
     delete[] compressed;
 
-    NBTParser::helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
-
-    // skip tagAndName
-    uint8_t* iterator = data + 3;
-
-    NBTParser::NBTCompound rootNode(iterator);
+    //NBTParser::helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+    
+    NBTParser::NBTCompound rootNode(data);
     rootNode.printAll();
 
     return 0;

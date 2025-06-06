@@ -321,7 +321,8 @@ private:
 
 public:
     NBTCompound() = default;
-    NBTCompound(uint8_t* iterator) {
+    NBTCompound(uint8_t* iterator, bool startingAfterTag=false) {
+        if (!startingAfterTag) iterator +=3;
         parseNBTCompound(iterator, *this);
     }
 

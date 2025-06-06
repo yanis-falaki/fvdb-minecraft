@@ -85,8 +85,10 @@ int main()
 
     delete[] compressed;
 
-    //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+    
 
+    //helpers::dumpArrayToFile(data, uncompressedSize, "chunk.nbt");
+/*
     NBTParser::SectionListPack sectionList = NBTParser::getSectionListPack(data, chunkX, chunkZ);
 
     int32_t sectionIndex = sectionList.getSectionIndexWithY(chunkY);
@@ -110,7 +112,7 @@ int main()
     std::cout << "Coords: " << i_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << ", " << j_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << ", " << k_coords[dataIndex + sectionIndex*NBTParser::SECTION_SIZE] << std::endl;
 
     serializeChunk(sectionList[sectionIndex], globalPalette, sectionList.xOffset, sectionList.zOffset, x, y, z);
-    
+*/
     delete[] data;
     inputFile.close();
     return 0;
